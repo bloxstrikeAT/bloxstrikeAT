@@ -81,7 +81,7 @@
   /* ---------- Header ---------- */
   .top-bar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:10px; }
   .brand{ font-weight:700; font-size:19px; letter-spacing:1.5px; text-transform:uppercase; display:flex; align-items:center; gap:9px; }
-  .brand-mark{ color: var(--brass); }
+  .brand-mark-icon{ flex-shrink:0; display:block; }
   .brand-sub{ font-size:12.5px; font-weight:500; color: var(--muted); letter-spacing:1px; }
   .top-actions{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 
@@ -114,6 +114,7 @@
     font-size:17px;
   }
   .icon-btn:hover{ border-color: var(--brass); color: var(--brass); }
+  .icon-btn:disabled{ opacity:0.35; cursor:default; pointer-events:none; }
 
   /* ---------- Unsaved notification (bottom-fixed) ---------- */
   .unsaved-banner{
@@ -152,6 +153,7 @@
     border-bottom:2px solid var(--brass-dim); padding-bottom:10px; font-weight:700;
     white-space:normal; line-height:1.3;
   }
+  thead th.th-nowrap{ white-space:nowrap; }
   tbody tr{ border-bottom:1px solid var(--border); color: var(--row-text, var(--text)); }
   tbody tr td{ background: var(--row-bg, var(--panel-alt)); }
   tbody tr:hover td{ filter: brightness(1.08); }
@@ -332,11 +334,22 @@
 <div class="app-shell">
 
 <header class="hud-panel top-bar">
-  <div class="brand"><span class="brand-mark">◆</span> BLOXSTRIKE <span class="brand-sub">// ACCOUNT TRACKER</span></div>
+  <div class="brand">
+    <svg class="brand-mark-icon" viewBox="0 0 100 100" width="20" height="20" aria-hidden="true" focusable="false">
+      <polygon points="50,4 96,50 50,96 4,50" fill="#FFC800"></polygon>
+      <path fill="#0A0A0A" transform="translate(50,50) scale(0.030811,-0.030811) translate(-802.5,-746.5)" d="M786 915Q877 915 924.0 955.0Q971 995 971 1073Q971 1150 924.0 1190.5Q877 1231 786 1231H573V915ZM799 262Q915 262 973.5 311.0Q1032 360 1032 459Q1032 556 974.0 604.5Q916 653 799 653H573V262ZM1157 799Q1281 763 1349.0 666.0Q1417 569 1417 428Q1417 212 1271.0 106.0Q1125 0 827 0H188V1493H766Q1077 1493 1216.5 1399.0Q1356 1305 1356 1098Q1356 989 1305.0 912.5Q1254 836 1157 799Z"></path>
+    </svg>
+    BLOXSTRIKE <span class="brand-sub">ACCOUNT TRACKER</span>
+  </div>
   <div class="top-actions">
     <button type="button" class="btn" id="btn-add-slot">+ Add Slot</button>
     <button type="button" class="btn" id="btn-save-all">Save All</button>
-    <button type="button" class="btn" id="btn-export">Export Report</button>
+    <button type="button" class="btn" id="btn-export" title="Copy a readable text summary to clipboard">Export Report</button>
+    <button type="button" class="btn" id="btn-export-data" title="Download a backup file of all your data">Export Data</button>
+    <button type="button" class="btn" id="btn-import-data" title="Restore data from a backup file">Import Data</button>
+    <input type="file" id="import-file-input" accept="application/json,.json" style="display:none">
+    <button type="button" class="icon-btn" id="btn-undo" title="Undo (Shift+,)" aria-label="Undo" disabled>↶</button>
+    <button type="button" class="icon-btn" id="btn-redo" title="Redo (Shift+.)" aria-label="Redo" disabled>↷</button>
     <button type="button" class="icon-btn" id="btn-shortcuts" title="Keyboard shortcuts" aria-label="Shortcuts">⌨</button>
     <button type="button" class="icon-btn" id="btn-settings" title="Appearance settings" aria-label="Settings">⚙</button>
   </div>
@@ -347,14 +360,14 @@
     <div class="table-scroll">
       <table id="tracker-table">
         <colgroup>
-          <col style="width:22px"><col style="width:42px"><col style="width:135px"><col style="width:112px">
+          <col style="width:22px"><col style="width:58px"><col style="width:135px"><col style="width:112px">
           <col style="width:54px"><col style="width:84px"><col style="width:120px">
           <col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px">
           <col style="width:96px">
         </colgroup>
         <thead>
           <tr>
-            <th></th><th>Slot #</th><th>Account</th><th>Last Saved</th>
+            <th></th><th class="th-nowrap">Slot #</th><th>Account</th><th>Last Saved</th>
             <th>Lvl</th><th>Credits</th><th>Daily Stars</th>
             <th>Hourly</th><th>Daily</th><th>Weekly</th><th>Monthly</th>
             <th>Save</th>
@@ -394,6 +407,7 @@
   <div class="setting-group"><label>Background</label><button type="button" class="color-swatch" id="cp-bg" data-key="bg" data-css="--bg" style="background:#0A0B0D" onclick="openGlobalColorPicker(this)"></button></div>
   <div class="setting-group"><label>Panel</label><button type="button" class="color-swatch" id="cp-panel" data-key="panel" data-css="--panel" style="background:#131417" onclick="openGlobalColorPicker(this)"></button></div>
   <div class="setting-group"><label>Text</label><button type="button" class="color-swatch" id="cp-text" data-key="text" data-css="--text" style="background:#E8E6E1" onclick="openGlobalColorPicker(this)"></button></div>
+  <div class="setting-group"><label>Grey / Muted Text</label><button type="button" class="color-swatch" id="cp-muted" data-key="muted" data-css="--muted" style="background:#8B8D93" onclick="openGlobalColorPicker(this)"></button></div>
   <div class="setting-group"><label>Accent (corners / dividers)</label><button type="button" class="color-swatch" id="cp-brass" data-key="brass" data-css="--brass" style="background:#C9A227" onclick="openGlobalColorPicker(this)"></button></div>
   <div class="setting-group"><label>Complete (Green)</label><button type="button" class="color-swatch" id="cp-complete" data-key="complete" data-css="--complete" style="background:#2F9E5B" onclick="openGlobalColorPicker(this)"></button></div>
   <div class="setting-group"><label>Incomplete (Red)</label><button type="button" class="color-swatch" id="cp-incomplete" data-key="incomplete" data-css="--incomplete" style="background:#B03A3A" onclick="openGlobalColorPicker(this)"></button></div>
@@ -423,6 +437,11 @@
     <tbody>
       <tr><td><span class="kbd">S</span></td><td>Save every unsaved slot at once.</td></tr>
       <tr><td><span class="kbd">1-9</span> <span class="kbd">1-4</span> <span class="kbd">1-4</span></td><td>Toggle a mission — slot → category → mission number. Skip the slot digit if there's only one slot.</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">1-4</span> <span class="kbd">R</span></td><td>Reset a whole mission category — slot → category → R. Skip the slot digit if there's only one slot.</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">R</span></td><td>Reset every mission in that slot at once — slot → R (skip the category). With only one slot, plain <span class="kbd">R</span> does this.</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">S</span></td><td>Save just one slot — slot → S. (With only one slot, plain <span class="kbd">S</span> already does this.)</td></tr>
+      <tr><td><span class="kbd">Shift</span> <span class="kbd">,</span></td><td>Undo the last action.</td></tr>
+      <tr><td><span class="kbd">Shift</span> <span class="kbd">.</span></td><td>Redo the last undone action.</td></tr>
       <tr><td><span class="kbd">Esc</span></td><td>Cancel an in-progress keyboard sequence, or close this panel.</td></tr>
       <tr><td>Scroll over Lvl / Credits</td><td>±1 per notch, hold <span class="kbd">Shift</span> for ±10.</td></tr>
       <tr><td><span class="kbd">⋮⋮</span> handle</td><td>Drag a row to reorder slots.</td></tr>
@@ -462,7 +481,7 @@
 
   function defaultStyle(){
     return {
-      bg:'#0A0B0D', panel:'#131417', text:'#E8E6E1', brass:'#C9A227',
+      bg:'#0A0B0D', panel:'#131417', text:'#E8E6E1', muted:'#8B8D93', brass:'#C9A227',
       complete:'#2F9E5B', incomplete:'#B03A3A',
       catHr:'#4A7FA6', catDa:'#3A8F6D', catWk:'#7B5EA7', catMo:'#C9A227',
       slots:{}
@@ -572,6 +591,7 @@
     root.setProperty('--bg', styleData.bg);
     root.setProperty('--panel', styleData.panel);
     root.setProperty('--text', styleData.text);
+    root.setProperty('--muted', styleData.muted);
     root.setProperty('--brass', styleData.brass);
     root.setProperty('--brass-dim', hexToRgba(styleData.brass, 0.35));
     root.setProperty('--complete', styleData.complete);
@@ -583,7 +603,7 @@
     syncStyleInputs();
   }
   function syncStyleInputs(){
-    const map = { bg:'cp-bg', panel:'cp-panel', text:'cp-text', brass:'cp-brass', complete:'cp-complete', incomplete:'cp-incomplete',
+    const map = { bg:'cp-bg', panel:'cp-panel', text:'cp-text', muted:'cp-muted', brass:'cp-brass', complete:'cp-complete', incomplete:'cp-incomplete',
                   catHr:'cp-cat-hr', catDa:'cp-cat-da', catWk:'cp-cat-wk', catMo:'cp-cat-mo' };
     Object.keys(map).forEach(function(k){
       const el = document.getElementById(map[k]);
@@ -819,6 +839,9 @@
   function attachWheelStep(input, min, max){
     input.addEventListener('wheel', function(e){
       e.preventDefault();
+      beginFieldEdit(input);
+      clearTimeout(input._wheelCommitTimer);
+      input._wheelCommitTimer = setTimeout(function(){ commitFieldEdit(input); }, 700);
       let val = parseInt(input.value, 10); if(isNaN(val)) val = 0;
       const step = e.shiftKey ? 10 : 1;
       val += (e.deltaY < 0 ? step : -step);
@@ -834,6 +857,7 @@
     const creditsInput = tr.querySelector('.f-credits');
     const nameInput = tr.querySelector('.f-name');
 
+    levelInput.addEventListener('focus', function(){ beginFieldEdit(levelInput); });
     levelInput.addEventListener('input', function(){
       sanitizeNumeric(levelInput, {min:0, max:40});
       markDirty(tr); recalcRow(tr); recalcGlobalFooter();
@@ -841,8 +865,10 @@
     levelInput.addEventListener('blur', function(){
       if(levelInput.value === '') levelInput.value = '0';
       recalcRow(tr); recalcGlobalFooter();
+      commitFieldEdit(levelInput);
     });
 
+    creditsInput.addEventListener('focus', function(){ beginFieldEdit(creditsInput); });
     creditsInput.addEventListener('input', function(){
       sanitizeNumeric(creditsInput, {min:0});
       markDirty(tr); recalcGlobalFooter();
@@ -850,12 +876,15 @@
     creditsInput.addEventListener('blur', function(){
       if(creditsInput.value === '') creditsInput.value = '0';
       recalcGlobalFooter();
+      commitFieldEdit(creditsInput);
     });
 
     attachWheelStep(levelInput, 0, 40);
     attachWheelStep(creditsInput, 0, null);
 
+    nameInput.addEventListener('focus', function(){ beginFieldEdit(nameInput); });
     nameInput.addEventListener('input', function(){ markDirty(tr); });
+    nameInput.addEventListener('blur', function(){ commitFieldEdit(nameInput); });
 
     attachDragEvents(tr);
   }
@@ -879,6 +908,7 @@
   }
 
   function removeSlot(id){
+    pushUndoSnapshot();
     const tr = document.getElementById(id);
     if(tr) tr.remove();
     appState.slots = appState.slots.filter(function(s){ return s.id !== id; });
@@ -923,6 +953,7 @@
   }
 
   function commitSlot(btn){
+    pushUndoSnapshot();
     const tr = btn.closest('tr');
     const id = tr.id;
     const slotData = readRowData(tr);
@@ -956,6 +987,7 @@
 
   /* ---------- interactions ---------- */
   function toggleMission(btn){
+    pushUndoSnapshot();
     btn.classList.toggle('bg-complete');
     btn.classList.toggle('bg-incomplete');
     const tr = btn.closest('tr');
@@ -965,6 +997,7 @@
   }
 
   function setStar(el){
+    pushUndoSnapshot();
     const container = el.parentElement;
     const stars = Array.from(container.querySelectorAll('.star-btn'));
     const idx = parseInt(el.dataset.idx, 10);
@@ -982,6 +1015,7 @@
   }
 
   function resetStars(el){
+    pushUndoSnapshot();
     const tr = el.closest('tr');
     tr.querySelectorAll('.star-btn').forEach(function(s){
       s.classList.remove('star-active');
@@ -993,6 +1027,7 @@
   }
 
   function resetCategory(el){
+    pushUndoSnapshot();
     const td = el.closest('.col-mission-cat');
     td.querySelectorAll('.mission-btn').forEach(function(b){
       b.classList.remove('bg-complete');
@@ -1096,6 +1131,104 @@
     });
   }
 
+  /* ---------- full data backup (export/import) ---------- */
+  function rebuildTableFromState(){
+    document.getElementById('table-body').innerHTML = '';
+    if(appState.slots.length === 0){
+      addSlot();
+    } else {
+      appState.slots.slice().forEach(function(s){ addSlot(s); });
+    }
+    renumber();
+    recalcGlobalFooter();
+    renderSlotStyleSettings();
+    updateUnsavedBanner();
+  }
+
+  function exportData(){
+    // Commit any pending edits first so the backup reflects exactly what's on screen.
+    document.querySelectorAll('#table-body tr.dirty').forEach(function(tr){
+      commitSlot(tr.querySelector('.save-btn'));
+    });
+
+    const backup = {
+      app: 'bloxstrike-tracker',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      appState: appState,
+      styleData: styleData
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bloxstrike-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    showToast('Backup downloaded — keep this file to restore your data later');
+  }
+
+  function triggerImportData(){
+    document.getElementById('import-file-input').click();
+  }
+
+  function handleImportFile(e){
+    const input = e.target;
+    const file = input.files && input.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(){
+      let parsed;
+      try{
+        parsed = JSON.parse(reader.result);
+      }catch(err){
+        showToast('Import failed — that file is not valid JSON');
+        input.value = '';
+        return;
+      }
+
+      const incomingAppState = (parsed && parsed.appState) ? parsed.appState : parsed;
+      const incomingStyle = (parsed && parsed.styleData) ? parsed.styleData : null;
+
+      if(!incomingAppState || !Array.isArray(incomingAppState.slots)){
+        showToast('Import failed — this file has no slot data');
+        input.value = '';
+        return;
+      }
+
+      const currentCount = appState.slots.length;
+      const hasUnsaved = !!document.querySelector('#table-body tr.dirty');
+      const warning = 'This will replace your current ' + currentCount + ' slot(s) with ' +
+        incomingAppState.slots.length + ' slot(s) from the backup file.' +
+        (hasUnsaved ? ' You also have unsaved edits on screen that will be lost.' : '') +
+        ' This cannot be undone. Continue?';
+      const proceed = currentCount === 0 || window.confirm(warning);
+      if(!proceed){ input.value = ''; return; }
+
+      appState = incomingAppState;
+      if(!Array.isArray(appState.slots)) appState.slots = [];
+      if(incomingStyle) styleData = Object.assign(defaultStyle(), incomingStyle);
+      if(!styleData.slots) styleData.slots = {};
+
+      persistAppState();
+      persistStyle();
+      rebuildTableFromState();
+      applyGlobalStyle();
+      clearUndoHistory();
+      showToast('Data imported successfully');
+      input.value = '';
+    };
+    reader.onerror = function(){
+      showToast('Import failed — could not read that file');
+      input.value = '';
+    };
+    reader.readAsText(file);
+  }
+
   /* ---------- drag and drop ---------- */
   function attachDragEvents(tr){
     const handle = tr.querySelector('.drag-handle');
@@ -1117,6 +1250,7 @@
       e.preventDefault();
       this.classList.remove('drag-over');
       if(draggedRow !== this){
+        pushUndoSnapshot();
         const rows = Array.from(document.querySelectorAll('#table-body tr'));
         if(rows.indexOf(draggedRow) < rows.indexOf(this)) this.after(draggedRow);
         else this.before(draggedRow);
@@ -1139,6 +1273,94 @@
     persistAppState();
   }
 
+  /* ---------- undo / redo ---------- */
+  const MAX_UNDO_STEPS = 50;
+  let undoStack = [];
+  let redoStack = [];
+  let pendingEditSnapshot = null;
+  let pendingEditEl = null;
+
+  function captureSnapshot(){
+    return {
+      html: document.getElementById('table-body').innerHTML,
+      state: JSON.stringify(appState)
+    };
+  }
+
+  function pushUndoSnapshot(){
+    undoStack.push(captureSnapshot());
+    if(undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
+    redoStack = [];
+    updateUndoRedoButtons();
+  }
+
+  function restoreSnapshot(snap){
+    document.getElementById('table-body').innerHTML = snap.html;
+    appState = JSON.parse(snap.state);
+    document.querySelectorAll('#table-body tr').forEach(function(tr){
+      attachRowEvents(tr);
+      applySlotStyle(tr.id);
+      recalcRow(tr);
+    });
+    renumber();
+    recalcGlobalFooter();
+    updateUnsavedBanner();
+    renderSlotStyleSettings();
+  }
+
+  function undo(){
+    if(undoStack.length === 0){ showToast('Nothing to undo'); return; }
+    redoStack.push(captureSnapshot());
+    const snap = undoStack.pop();
+    restoreSnapshot(snap);
+    persistAppState();
+    updateUndoRedoButtons();
+    showToast('Undo');
+  }
+
+  function redo(){
+    if(redoStack.length === 0){ showToast('Nothing to redo'); return; }
+    undoStack.push(captureSnapshot());
+    const snap = redoStack.pop();
+    restoreSnapshot(snap);
+    persistAppState();
+    updateUndoRedoButtons();
+    showToast('Redo');
+  }
+
+  function clearUndoHistory(){
+    undoStack = [];
+    redoStack = [];
+    updateUndoRedoButtons();
+  }
+
+  function updateUndoRedoButtons(){
+    const undoBtn = document.getElementById('btn-undo');
+    const redoBtn = document.getElementById('btn-redo');
+    if(undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if(redoBtn) redoBtn.disabled = redoStack.length === 0;
+  }
+
+  // Groups rapid-fire edits inside a single text field (typing, scroll-to-adjust)
+  // into one undo step instead of one step per keystroke/notch.
+  function beginFieldEdit(el){
+    if(pendingEditEl === el) return;
+    pendingEditEl = el;
+    pendingEditSnapshot = captureSnapshot();
+    pendingEditSnapshot._value = el.value;
+  }
+  function commitFieldEdit(el){
+    if(pendingEditEl !== el || !pendingEditSnapshot) return;
+    if(pendingEditSnapshot._value !== el.value){
+      undoStack.push(pendingEditSnapshot);
+      if(undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
+      redoStack = [];
+      updateUndoRedoButtons();
+    }
+    pendingEditEl = null;
+    pendingEditSnapshot = null;
+  }
+
   /* ---------- keyboard shortcuts ---------- */
   let kbBuffer = '';
   let kbTimeout = null;
@@ -1148,6 +1370,45 @@
     kbHighlighted.forEach(function(el){ el.classList.remove('kb-flash'); });
     kbHighlighted = [];
     document.getElementById('kb-indicator').classList.remove('active');
+  }
+
+  function restartKbTimeout(){
+    clearTimeout(kbTimeout);
+    kbTimeout = setTimeout(function(){ kbBuffer = ''; clearKbHighlights(); }, 1500);
+  }
+
+  function endKbSequence(){
+    kbBuffer = '';
+    clearTimeout(kbTimeout);
+    setTimeout(clearKbHighlights, 300);
+  }
+
+  function highlightKbBuffer(rows, needsSlotDigit){
+    clearKbHighlights();
+    const indicator = document.getElementById('kb-indicator');
+    indicator.classList.add('active');
+
+    let row = null;
+    if(needsSlotDigit){
+      if(kbBuffer.length >= 1){
+        const rowIdx = parseInt(kbBuffer[0],10) - 1;
+        row = (rowIdx >= 0 && rowIdx < rows.length) ? rows[rowIdx] : null;
+      }
+    } else {
+      row = rows[0];
+    }
+    if(row){ row.classList.add('kb-flash'); kbHighlighted.push(row); }
+
+    const catIndex = needsSlotDigit ? 1 : 0;
+    if(row && kbBuffer.length > catIndex){
+      const catDigit = parseInt(kbBuffer[catIndex],10);
+      if(catDigit >= 1 && catDigit <= 4){
+        const group = row.querySelectorAll('.mission-group')[catDigit-1];
+        if(group){ group.classList.add('kb-flash'); kbHighlighted.push(group); }
+      }
+    }
+
+    indicator.textContent = 'KEYS: ' + kbBuffer.split('').join(' → ');
   }
 
   function bindKeyboardShortcuts(){
@@ -1163,67 +1424,104 @@
         return;
       }
 
-      if(e.key.toLowerCase() === 's' && !e.ctrlKey && !e.metaKey && !e.altKey){
+      // Shift+, (<) undo, Shift+. (>) redo
+      if(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === '<' || e.code === 'Comma')){
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === '>' || e.code === 'Period')){
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      // Plain "S" with no sequence in progress: save every unsaved slot.
+      if(key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey && kbBuffer === ''){
         e.preventDefault();
         saveAll();
         return;
       }
 
-      if(!/^[1-9]$/.test(e.key)) return;
-
       const rows = Array.from(document.querySelectorAll('#table-body tr'));
       if(rows.length === 0) return;
 
       const needsSlotDigit = rows.length > 1;
-      const requiredLen = needsSlotDigit ? 3 : 2;
+      const isDigit = /^[1-9]$/.test(e.key);
+      const isR = key === 'r';
+      const isS = key === 's';
 
-      kbBuffer += e.key;
-      if(kbBuffer.length > requiredLen) kbBuffer = kbBuffer.slice(-requiredLen);
+      if(!isDigit && !isR && !isS) return;
 
-      clearTimeout(kbTimeout);
-      kbTimeout = setTimeout(function(){ kbBuffer = ''; clearKbHighlights(); }, 1500);
+      const slotStageLen = needsSlotDigit ? 1 : 0;
+      const catStageLen = slotStageLen + 1;
 
-      clearKbHighlights();
-      const indicator = document.getElementById('kb-indicator');
-      indicator.classList.add('active');
-
-      let row = null;
-      if(needsSlotDigit){
-        if(kbBuffer.length >= 1){
-          const rowIdx = parseInt(kbBuffer[0],10) - 1;
-          row = (rowIdx >= 0 && rowIdx < rows.length) ? rows[rowIdx] : null;
-        }
-      } else {
-        row = rows[0];
-      }
-      if(row){ row.classList.add('kb-flash'); kbHighlighted.push(row); }
-
-      const catIndex = needsSlotDigit ? 1 : 0;
-      if(row && kbBuffer.length > catIndex){
-        const catDigit = parseInt(kbBuffer[catIndex],10);
-        if(catDigit >= 1 && catDigit <= 4){
-          const group = row.querySelectorAll('.mission-group')[catDigit-1];
-          if(group){ group.classList.add('kb-flash'); kbHighlighted.push(group); }
-        }
+      // --- Stage 1: collecting the slot digit (only when there's more than one slot) ---
+      if(needsSlotDigit && kbBuffer.length === 0){
+        if(!isDigit) return;
+        e.preventDefault();
+        kbBuffer += e.key;
+        restartKbTimeout();
+        highlightKbBuffer(rows, needsSlotDigit);
+        return;
       }
 
-      indicator.textContent = 'KEYS: ' + kbBuffer.split('').join(' → ');
-
-      if(kbBuffer.length === requiredLen){
-        let slotIdx, catDigit, missDigit;
-        if(needsSlotDigit){
-          slotIdx = parseInt(kbBuffer[0],10) - 1;
-          catDigit = parseInt(kbBuffer[1],10);
-          missDigit = parseInt(kbBuffer[2],10);
-        } else {
-          slotIdx = 0;
-          catDigit = parseInt(kbBuffer[0],10);
-          missDigit = parseInt(kbBuffer[1],10);
+      // --- Stage 2: collecting the category digit, "slot + S" to save just that slot, or "slot + R" to reset the whole slot ---
+      if(kbBuffer.length === slotStageLen){
+        if(isS && needsSlotDigit){
+          e.preventDefault();
+          const slotIdx = parseInt(kbBuffer[0],10) - 1;
+          endKbSequence();
+          triggerSlotSaveShortcut(slotIdx);
+          return;
         }
-        triggerMissionShortcut(slotIdx, catDigit, missDigit);
+        if(isR){
+          e.preventDefault();
+          const slotIdx = needsSlotDigit ? (parseInt(kbBuffer[0],10) - 1) : 0;
+          endKbSequence();
+          triggerSlotResetShortcut(slotIdx);
+          return;
+        }
+        if(!isDigit){
+          kbBuffer = '';
+          clearTimeout(kbTimeout);
+          clearKbHighlights();
+          return;
+        }
+        e.preventDefault();
+        kbBuffer += e.key;
+        restartKbTimeout();
+        highlightKbBuffer(rows, needsSlotDigit);
+        return;
+      }
+
+      // --- Stage 3: mission digit (toggle one mission) or "R" (reset the whole category) ---
+      if(kbBuffer.length === catStageLen){
+        e.preventDefault();
+        const slotIdx = needsSlotDigit ? (parseInt(kbBuffer[0],10) - 1) : 0;
+        const catDigit = parseInt(kbBuffer[slotStageLen],10);
+
+        if(isR){
+          kbBuffer += 'r';
+          highlightKbBuffer(rows, needsSlotDigit);
+          endKbSequence();
+          triggerCategoryResetShortcut(slotIdx, catDigit);
+          return;
+        }
+        if(isDigit){
+          const missDigit = parseInt(e.key,10);
+          kbBuffer += e.key;
+          highlightKbBuffer(rows, needsSlotDigit);
+          endKbSequence();
+          triggerMissionShortcut(slotIdx, catDigit, missDigit);
+          return;
+        }
         kbBuffer = '';
         clearTimeout(kbTimeout);
-        setTimeout(clearKbHighlights, 300);
+        clearKbHighlights();
+        return;
       }
     });
   }
@@ -1243,6 +1541,63 @@
     setTimeout(function(){ btn.classList.remove('kb-toggled'); }, 400);
   }
 
+  function triggerCategoryResetShortcut(slotIdx, catDigit){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    if(catDigit < 1 || catDigit > 4) return;
+    const row = rows[slotIdx];
+    const group = row.querySelectorAll('.mission-group')[catDigit-1];
+    if(!group) return;
+    pushUndoSnapshot();
+    const td = group.closest('.col-mission-cat');
+    const btns = td.querySelectorAll('.mission-btn');
+    btns.forEach(function(b){
+      b.classList.remove('bg-complete');
+      b.classList.add('bg-incomplete');
+      b.classList.add('kb-toggled');
+    });
+    markDirty(row);
+    recalcRow(row);
+    recalcGlobalFooter();
+    setTimeout(function(){
+      btns.forEach(function(b){ b.classList.remove('kb-toggled'); });
+    }, 400);
+  }
+
+  function triggerSlotResetShortcut(slotIdx){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    const row = rows[slotIdx];
+    pushUndoSnapshot();
+    const btns = row.querySelectorAll('.mission-btn');
+    btns.forEach(function(b){
+      b.classList.remove('bg-complete');
+      b.classList.add('bg-incomplete');
+      b.classList.add('kb-toggled');
+    });
+    markDirty(row);
+    recalcRow(row);
+    recalcGlobalFooter();
+    showToast('Slot ' + (slotIdx+1) + ' — all missions reset');
+    setTimeout(function(){
+      btns.forEach(function(b){ b.classList.remove('kb-toggled'); });
+    }, 400);
+  }
+
+  function triggerSlotSaveShortcut(slotIdx){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    const row = rows[slotIdx];
+    const btn = row.querySelector('.save-btn');
+    if(!btn) return;
+    if(row.dataset.dirty !== 'true'){
+      showToast('Slot ' + (slotIdx+1) + ' — nothing to save');
+      return;
+    }
+    commitSlot(btn);
+    showToast('Slot ' + (slotIdx+1) + ' saved');
+  }
+
   /* ---------- global bindings & init ---------- */
   function toggleSettings(){
     document.getElementById('settings-drawer').classList.toggle('open');
@@ -1256,9 +1611,14 @@
   }
 
   function bindGlobalHandlers(){
-    document.getElementById('btn-add-slot').addEventListener('click', function(){ addSlot(); });
+    document.getElementById('btn-add-slot').addEventListener('click', function(){ pushUndoSnapshot(); addSlot(); });
     document.getElementById('btn-save-all').addEventListener('click', saveAll);
+    document.getElementById('btn-undo').addEventListener('click', undo);
+    document.getElementById('btn-redo').addEventListener('click', redo);
     document.getElementById('btn-export').addEventListener('click', exportToText);
+    document.getElementById('btn-export-data').addEventListener('click', exportData);
+    document.getElementById('btn-import-data').addEventListener('click', triggerImportData);
+    document.getElementById('import-file-input').addEventListener('change', handleImportFile);
     document.getElementById('btn-settings').addEventListener('click', toggleSettings);
     document.getElementById('settings-overlay').addEventListener('click', toggleSettings);
     document.getElementById('btn-close-settings').addEventListener('click', toggleSettings);
