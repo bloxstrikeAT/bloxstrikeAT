@@ -250,6 +250,13 @@
   .mc-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
   .mc-slot-num{ font-family: var(--font-mono); color: var(--muted); font-size:11px; flex-shrink:0; }
   .mc-name{ font-weight:700; font-size:13px; letter-spacing:0.3px; flex-shrink:0; }
+  .mc-reset-missions-btn{
+    background: var(--panel-alt); border:1px solid var(--border-strong); color: var(--text);
+    font-family: var(--font-display); font-weight:600; font-size:9.5px; letter-spacing:0.3px;
+    padding:4px 8px; border-radius:2px; cursor:pointer; white-space:nowrap; flex-shrink:0;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .mc-reset-missions-btn:hover{ background: rgba(176,58,58,0.12); border-color: rgba(176,58,58,0.4); color: var(--incomplete); }
   .mc-stars{ display:flex; align-items:center; gap:6px; margin-left:auto; min-width:0; }
   .mc-stars-label{ font-size:9.5px; letter-spacing:0.5px; color: var(--muted); white-space:nowrap; flex-shrink:0; }
   .mc-stars-row{ display:flex; gap:3px; }
@@ -336,7 +343,7 @@
   .mc-m-fill{ height:100%; background: linear-gradient(90deg, var(--progress-start), var(--progress-end)); border-radius:4px; transition:width .2s ease; }
   .mc-m-nums{ display:flex; align-items:center; gap:2px; flex-shrink:0; }
   input.mc-m-current, input.mc-m-target{
-    width:28px; background:transparent; border:none; border-bottom:1px solid transparent;
+    width:50px; background:transparent; border:none; border-bottom:1px solid transparent;
     color: inherit; font-family: var(--font-mono); font-size:11px; text-align:center; padding:1px;
     cursor: ns-resize;
   }
@@ -483,6 +490,15 @@
   hr{ border:0; border-top:1px solid var(--border); margin:14px 0; }
 
   /* ---------- Toast & keyboard indicator (bottom-stacked, same corner as the unsaved-work notice) ---------- */
+  .toast-blur-backdrop{
+    position:fixed; left:0; right:0; bottom:0; height:170px;
+    pointer-events:none; z-index:199;
+    backdrop-filter: blur(9px); -webkit-backdrop-filter: blur(9px);
+    -webkit-mask-image: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%);
+    mask-image: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0) 100%);
+    opacity:0; transition: opacity .25s ease;
+  }
+  .toast-blur-backdrop.show{ opacity:1; }
   .toast{
     position:fixed; bottom:112px; left:50%; transform:translateX(-50%) translateY(20px);
     background: var(--panel); border:1px solid var(--toast-accent); padding:8px 14px; border-radius:2px;
@@ -583,7 +599,7 @@
 </div>
 <div id="mission-tracker-container" class="mission-tracker-container"></div>
 
-<div class="footer-sig">made by @svhxll with Claude - v18</div>
+<div class="footer-sig">made by @svhxll with Claude - v19</div>
 
 </div>
 
@@ -679,6 +695,7 @@
 </div>
 
 <div class="unsaved-banner hidden" id="unsaved-banner"><span class="notif-warn-icon">⚠</span> You have unsaved slots. Progress on a row is not written to storage until you hit its SAVE button.</div>
+<div class="toast-blur-backdrop" id="toast-blur-backdrop"></div>
 <div class="toast" id="toast" aria-live="polite"></div>
 <div class="kb-indicator" id="kb-indicator" aria-live="polite"></div>
 
@@ -780,10 +797,12 @@
       'Get 18 Pistol Kills',
       'Win 2 Deathmatch Matches',
       'Deal 4000 Damage in Deathmatch',
-      'Finish Top 3 in Deathmatch 3 Times'
+      'Finish Top 3 in Deathmatch 3 Times',
+      'Get 25 Headshots in Deathmatch'
     ],
     WK: [
       'Get 75 MVPs',
+      'Earn 75 MVPs',
       'Get 12 Multi-Kills in Deathmatch',
       'Get 40 Pistol Kills',
       'Get 70 Assists',
@@ -907,8 +926,13 @@
       t.textContent = msg;
     }
     t.classList.add('show');
+    const blur = document.getElementById('toast-blur-backdrop');
+    if(blur) blur.classList.add('show');
     clearTimeout(showToast._t);
-    showToast._t = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+    showToast._t = setTimeout(function(){
+      t.classList.remove('show');
+      if(blur) blur.classList.remove('show');
+    }, 2400);
   }
   function sanitizeNumeric(el, opts){
     opts = opts || {};
@@ -1434,7 +1458,12 @@
     if(!d.cats) d.cats = {};
     ['HR','DA','WK','MO'].forEach(function(cat){
       if(!d.cats[cat]) d.cats[cat] = freshCatData(cat);
-      d.cats[cat].missions.forEach(function(m){
+      const cd = d.cats[cat];
+      // Repair any legacy/corrupted timer fields instead of letting a bad
+      // value silently freeze that category's countdown forever.
+      if(typeof cd.remainingSec !== 'number' || isNaN(cd.remainingSec)) cd.remainingSec = CAT_DURATION_SEC[cat];
+      if(typeof cd.lastTick !== 'number' || isNaN(cd.lastTick)) cd.lastTick = Date.now();
+      cd.missions.forEach(function(m){
         if(typeof m.awarded !== 'boolean') m.awarded = (m.target > 0 && m.current >= m.target);
       });
     });
@@ -1444,6 +1473,13 @@
   }
 
   function liveRemainingSec(catData){
+    // Any malformed or legacy-shaped timer data (missing lastTick, etc.) is
+    // treated as already-expired rather than producing NaN — NaN <= 0 is
+    // false in JS, which would silently freeze the countdown forever
+    // instead of looping. Treating it as expired lets the very next tick
+    // reset it to a fresh, healthy countdown.
+    if(!catData || typeof catData.remainingSec !== 'number' || isNaN(catData.remainingSec)) return 0;
+    if(typeof catData.lastTick !== 'number' || isNaN(catData.lastTick)) return 0;
     const elapsed = Math.floor((Date.now() - catData.lastTick) / 1000);
     return Math.max(0, catData.remainingSec - elapsed);
   }
@@ -1505,11 +1541,13 @@
 
   // Mission names almost always embed their target count, e.g. "Get 4
   // Multi-Kills In Deathmatch" -> 4, "Deal 1000 Damage" -> 1000. Pull the
-  // first number out so renaming a mission (typing or autocomplete) keeps
-  // the target in sync automatically.
+  // LAST number out (not the first) so renaming a mission (typing or
+  // autocomplete) keeps the target in sync automatically — this matters for
+  // names with more than one number, like "Finish Top 3 in Deathmatch 40
+  // Times", where the target is the trailing 40, not the leading 3.
   function parseTargetFromMissionName(name){
-    const match = /\d+/.exec(name || '');
-    return match ? parseInt(match[0], 10) : null;
+    const matches = String(name || '').match(/\d+/g);
+    return matches && matches.length ? parseInt(matches[matches.length - 1], 10) : null;
   }
 
   /* ---------- Slot table <-> Mission tracker card linking ---------- */
@@ -1596,17 +1634,58 @@
     }
 
     if(!opts.silent){
+      // Completing (or un-completing) a mission no longer touches the
+      // total automatically — it only notifies. Add the reward to the
+      // slot's credits yourself if you want it counted.
       if(complete && !wasAwarded){
-        applyCreditDelta(tr, m.reward);
-        showToast('+' + m.reward + ' credits — "' + shortMissionLabel(m.name) + '" complete');
-      } else if(!complete && wasAwarded){
-        applyCreditDelta(tr, -m.reward);
+        showToast('+' + m.reward + ' credits — "' + shortMissionLabel(m.name) + '" complete (add manually)');
       }
     }
 
     persistMissionState();
     recalcRow(tr);
     recalcGlobalFooter();
+  }
+
+  // Resets one category's timer back to its full duration and clears just
+  // that category's missions back to zero — used by the per-category timer
+  // reset button and by the auto-reset that fires when a timer runs out.
+  function resetCategoryMissions(slotId, cat, opts){
+    opts = opts || {};
+    const tr = document.getElementById(slotId);
+    const data = getMissionData(slotId);
+    const catData = data.cats[cat];
+    if(!catData) return;
+    catData.remainingSec = CAT_DURATION_SEC[cat];
+    catData.lastTick = Date.now();
+    catData.missions.forEach(function(m, idx){
+      m.current = 0;
+      applyMissionCompletionEffects(slotId, cat, idx, false, 'card', { silent:true });
+    });
+    if(tr) markDirty(tr);
+    persistMissionState();
+    const card = getMissionCard(slotId);
+    if(card && data.activeCat === cat) renderMissionCatBody(card);
+    if(!opts.silentToast){
+      showToast(opts.toastMsg || (CAT_NAMES[cat] + ' missions reset'));
+    }
+  }
+
+  // Clears every mission (all four categories) for one slot back to zero.
+  // Leaves each category's timer running untouched — only the progress resets.
+  function resetAllMissionsInSlot(slotId){
+    const tr = document.getElementById(slotId);
+    if(!tr) return;
+    tr.querySelectorAll('.mission-group').forEach(function(group){
+      const cat = group.dataset.cat;
+      const btns = group.querySelectorAll('.mission-btn');
+      btns.forEach(function(b, idx){
+        b.classList.remove('bg-complete');
+        b.classList.add('bg-incomplete');
+        applyMissionCompletionEffects(tr.id, cat, idx, false, 'mainTable', { silent:true });
+      });
+    });
+    markDirty(tr);
   }
 
   // One-time pass at load: the slot-table checkboxes and the mission-tracker
@@ -1751,8 +1830,19 @@
 
     missionsEl.addEventListener('keydown', function(e){
       if(!e.target.classList.contains('mc-m-name')) return;
-      if(!acEl || !acEl.classList.contains('open') || acInput !== e.target) return;
-      if(e.key === 'Tab' || e.key === 'Enter'){
+      const acOpen = acEl && acEl.classList.contains('open') && acInput === e.target;
+
+      // Enter always finishes editing — accept the highlighted suggestion
+      // first (if the dropdown happens to be open), then get out of the field.
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        if(acOpen) acceptAutocomplete(acActiveIndex);
+        e.target.blur();
+        return;
+      }
+
+      if(!acOpen) return;
+      if(e.key === 'Tab'){
         e.preventDefault();
         acceptAutocomplete(acActiveIndex);
       } else if(e.key === 'ArrowDown'){
@@ -1809,6 +1899,7 @@
     return '<div class="mission-card" data-slot="' + slotId + '">' +
       '<div class="mc-head">' +
         '<span class="mc-slot-num">#' + num + '</span><span class="mc-name">' + escapeHtml(name) + '</span>' +
+        '<button type="button" class="mc-reset-missions-btn" title="Reset every mission in this slot (all categories) back to zero">Reset Missions</button>' +
         '<div class="mc-stars">' +
           '<span class="mc-stars-label">Daily Stars</span>' +
           '<div class="mc-stars-row">' + starsHtml + '</div>' +
@@ -1938,16 +2029,17 @@
     card.querySelector('.mc-timer-reset').addEventListener('click', function(){
       const data = getMissionData(slotId);
       const cat = data.activeCat;
-      data.cats[cat].remainingSec = CAT_DURATION_SEC[cat];
-      data.cats[cat].lastTick = Date.now();
-      data.cats[cat].missions.forEach(function(m, idx){
-        m.current = 0;
-        applyMissionCompletionEffects(slotId, cat, idx, false, 'card', { silent:true });
-      });
-      persistMissionState();
-      renderMissionCatBody(card);
-      showToast(CAT_NAMES[cat] + ' timer & missions reset');
+      resetCategoryMissions(slotId, cat, { toastMsg: CAT_NAMES[cat] + ' timer & missions reset' });
     });
+
+    const resetAllBtn = card.querySelector('.mc-reset-missions-btn');
+    if(resetAllBtn){
+      resetAllBtn.addEventListener('click', function(){
+        pushUndoSnapshot();
+        resetAllMissionsInSlot(slotId);
+        showToast('All missions reset for this slot');
+      });
+    }
 
     card.querySelector('.mc-missions').addEventListener('change', function(e){
       const row = e.target.closest('.mc-mission-row');
@@ -2006,10 +2098,24 @@
 
   function tickMissionTimers(){
     document.querySelectorAll('.mission-card').forEach(function(card){
-      const timerInput = card.querySelector('.mc-timer');
-      if(!timerInput || document.activeElement === timerInput) return;
       const slotId = card.dataset.slot;
       const data = getMissionData(slotId);
+      const timerInput = card.querySelector('.mc-timer');
+      // Don't yank a timer out from under someone mid-edit.
+      const editingCat = (timerInput && document.activeElement === timerInput) ? data.activeCat : null;
+
+      // Check every category's timer, not just the one currently shown —
+      // each timer runs independently, and when one hits zero only the
+      // missions in that category (its own area) get cleared.
+      ['HR','DA','WK','MO'].forEach(function(cat){
+        if(cat === editingCat) return;
+        const catData = data.cats[cat];
+        if(liveRemainingSec(catData) <= 0){
+          resetCategoryMissions(slotId, cat, { toastMsg: CAT_NAMES[cat] + ' missions reset — timer expired' });
+        }
+      });
+
+      if(!timerInput || document.activeElement === timerInput) return;
       const catData = data.cats[data.activeCat];
       timerInput.value = formatCountdown(liveRemainingSec(catData) * 1000);
     });
