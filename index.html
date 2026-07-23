@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BloxStrike Account Tracker</title>
-<link rel="icon" href="favicon.ico" sizes="any">
+<title>BLOXSTRIKE ACCOUNT TRACKER</title>
+<link rel="icon" href="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" sizes="any">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
@@ -335,10 +335,7 @@
 
 <header class="hud-panel top-bar">
   <div class="brand">
-    <svg class="brand-mark-icon" viewBox="0 0 100 100" width="20" height="20" aria-hidden="true" focusable="false">
-      <polygon points="50,4 96,50 50,96 4,50" fill="#FFC800"></polygon>
-      <path fill="#0A0A0A" transform="translate(50,50) scale(0.030811,-0.030811) translate(-802.5,-746.5)" d="M786 915Q877 915 924.0 955.0Q971 995 971 1073Q971 1150 924.0 1190.5Q877 1231 786 1231H573V915ZM799 262Q915 262 973.5 311.0Q1032 360 1032 459Q1032 556 974.0 604.5Q916 653 799 653H573V262ZM1157 799Q1281 763 1349.0 666.0Q1417 569 1417 428Q1417 212 1271.0 106.0Q1125 0 827 0H188V1493H766Q1077 1493 1216.5 1399.0Q1356 1305 1356 1098Q1356 989 1305.0 912.5Q1254 836 1157 799Z"></path>
-    </svg>
+    <img class="brand-mark-icon" src="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" width="20" height="20" alt="" aria-hidden="true">
     BLOXSTRIKE <span class="brand-sub">ACCOUNT TRACKER</span>
   </div>
   <div class="top-actions">
@@ -1281,6 +1278,13 @@
   let pendingEditEl = null;
 
   function captureSnapshot(){
+    // Text inputs decouple their live `.value` property from the `value`
+    // attribute once a user types in them, so innerHTML alone would freeze
+    // stale attribute text into the snapshot. Sync attributes first so
+    // typed-but-uncommitted text survives undo/redo correctly.
+    document.querySelectorAll('#table-body input[type=text]').forEach(function(inp){
+      inp.setAttribute('value', inp.value);
+    });
     return {
       html: document.getElementById('table-body').innerHTML,
       state: JSON.stringify(appState)
