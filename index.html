@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BloxStrike Account Tracker</title>
+<title>BloxStrike Account Tracker v19</title>
 <link rel="icon" href="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" sizes="any">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -315,29 +315,27 @@
   }
   input.mc-m-reward::before{ content:'x'; }
   input.mc-m-reward:focus{ outline:none; border-bottom-color: var(--brass); }
+  .mc-m-name-wrap{ position:relative; flex:1 1 auto; min-width:0; display:flex; }
   input.mc-m-name{
-    flex:1 1 auto; min-width:0; background:transparent; border:none; border-bottom:1px solid transparent;
-    color: var(--text); font-family: var(--font-display); font-weight:600; font-size:12px; padding:1px 2px;
+    position:relative; z-index:1; flex:1 1 auto; min-width:0; width:100%; background:transparent; border:none; border-bottom:1px solid transparent;
+    color: var(--text); font-family: var(--font-display); font-weight:600; font-size:12px; padding:1px 2px; box-sizing:border-box;
   }
   input.mc-m-name:focus{ outline:none; border-bottom-color: var(--brass); background: rgba(255,255,255,0.03); }
 
-  /* ---------- Mission name autocomplete ---------- */
-  .mc-autocomplete{
-    position:fixed; z-index:300; background: var(--panel); border:1px solid var(--border-strong);
-    border-radius:2px; max-height:190px; overflow-y:auto; display:none;
-    box-shadow: 0 12px 28px rgba(0,0,0,0.55);
+  /* ---------- Mission name autocomplete (inline "ghost text" style) ---------- */
+  /* Sits directly beneath the real input, same font/padding, so the two lines
+     of text land on the exact same pixels. The already-typed portion is
+     invisible (visibility:hidden — reserves the right width) and only the
+     un-typed remainder of the best match is actually shown, in muted gray,
+     picking up right where the real input's own text leaves off. */
+  .mc-m-ghost{
+    position:absolute; z-index:0; inset:0;
+    display:flex; align-items:center;
+    font-family: var(--font-display); font-weight:600; font-size:12px; padding:1px 2px; box-sizing:border-box;
+    white-space:pre; overflow:hidden; pointer-events:none;
   }
-  .mc-autocomplete.open{ display:block; }
-  .mc-autocomplete-item{
-    padding:6px 10px; font-size:11px; font-family: var(--font-display); color: var(--text);
-    cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid var(--border);
-  }
-  .mc-autocomplete-item:last-child{ border-bottom:none; }
-  .mc-autocomplete-item:hover, .mc-autocomplete-item.active{ background: rgba(255,255,255,0.07); }
-  .mc-autocomplete-item .ac-match{ color: var(--brass); font-weight:700; }
-  .mc-autocomplete-hint{
-    padding:5px 10px; font-size:9.5px; letter-spacing:0.5px; color: var(--muted);
-    border-bottom:1px solid var(--border); background: rgba(255,255,255,0.02);
+  .mc-m-ghost .ac-typed{ visibility:hidden; }
+  .mc-m-ghost .ac-suggest{ color: var(--muted);
   }
   .mc-m-bar{ flex:1 1 auto; min-width:40px; height:6px; background: rgba(255,255,255,0.06); border-radius:4px; overflow:hidden; }
   .mc-m-fill{ height:100%; background: linear-gradient(90deg, var(--progress-start), var(--progress-end)); border-radius:4px; transition:width .2s ease; }
@@ -599,7 +597,7 @@
 </div>
 <div id="mission-tracker-container" class="mission-tracker-container"></div>
 
-<div class="footer-sig">made by @svhxll with Claude - v19</div>
+<div class="footer-sig">made by @svhxll with Claude</div>
 
 </div>
 
@@ -653,6 +651,7 @@
       <tr><td><span class="kbd">1-9</span> <span class="kbd">1-4 or h/d/w/m</span> <span class="kbd">R</span></td><td>Reset a whole mission category — slot → category → R. Skip the slot digit if there's only one slot.</td></tr>
       <tr><td><span class="kbd">1-9</span> <span class="kbd">R</span></td><td>Reset every mission in that slot at once — slot → R (skip the category). With only one slot, plain <span class="kbd">R</span> does this.</td></tr>
       <tr><td><span class="kbd">1-9</span> <span class="kbd">S</span></td><td>Save just one slot — slot → S. (With only one slot, plain <span class="kbd">S</span> already does this.)</td></tr>
+      <tr><td><span class="kbd">M</span> <span class="kbd">1-9</span> <span class="kbd">h/d/w/m</span> <span class="kbd">1-4</span></td><td>Jump straight to editing a mission's name — M → slot → category → mission number. Switches the mission tracker card to that category and puts your cursor right in the name field, text selected and ready to type over. Skip the slot digit if there's only one slot.</td></tr>
       <tr><td><span class="kbd">Shift</span> <span class="kbd">,</span></td><td>Undo the last action.</td></tr>
       <tr><td><span class="kbd">Shift</span> <span class="kbd">.</span></td><td>Redo the last undone action.</td></tr>
       <tr><td><span class="kbd">Esc</span></td><td>Cancel an in-progress keyboard sequence, or close this panel.</td></tr>
@@ -1338,7 +1337,7 @@
     attachDragEvents(tr);
   }
 
-  function addSlot(existing){
+  function addSlot(existing, skipRender){
     let slot;
     if(existing){
       slot = existing;
@@ -1351,6 +1350,11 @@
       persistAppState();
     }
     renderRow(slot);
+    // Bulk loaders (loading saved state, importing a backup) add many slots
+    // in one loop and do this render pass once at the end instead — doing
+    // it after every single slot rebuilds every mission-tracker card
+    // (all N of them) N times over.
+    if(skipRender) return;
     renumber();
     recalcGlobalFooter();
     renderSlotStyleSettings();
@@ -1659,7 +1663,16 @@
     catData.remainingSec = CAT_DURATION_SEC[cat];
     catData.lastTick = Date.now();
     catData.missions.forEach(function(m, idx){
+      // A real timer reset means the game has rolled over to a brand new
+      // set of missions for this category — the old name/target/reward are
+      // no longer meaningful, so wipe the row blank instead of leaving
+      // stale text behind. (Progress-only resets, like the row's mini
+      // reset icon or the keyboard "R" shortcut, deliberately leave these
+      // alone — only an actual timer reset blanks them.)
       m.current = 0;
+      m.name = '';
+      m.target = 0;
+      m.reward = 0;
       applyMissionCompletionEffects(slotId, cat, idx, false, 'card', { silent:true });
     });
     if(tr) markDirty(tr);
@@ -1716,75 +1729,63 @@
   }
 
   /* ---------- Mission name autocomplete ---------- */
-  // A single shared floating dropdown, repositioned under whichever
-  // .mc-m-name input is currently focused. Tab or Enter accepts the
-  // highlighted suggestion; Up/Down moves the highlight; Escape closes it.
-  let acEl = null;
+  // Inline "ghost text" style, like a browser address bar: the best-matching
+  // library entry that starts with what's been typed so far is shown as
+  // muted gray text immediately after the caret, right inside the field
+  // (see .mc-m-ghost). No dropdown list. Tab (or Enter) fills it in;
+  // Up/Down cycles to a different match when there's more than one.
   let acInput = null;
   let acMatches = [];
   let acActiveIndex = -1;
 
-  function ensureAutocompleteEl(){
-    if(acEl) return acEl;
-    acEl = document.createElement('div');
-    acEl.className = 'mc-autocomplete';
-    document.body.appendChild(acEl);
-    // Keep focus on the text input when clicking a suggestion.
-    acEl.addEventListener('mousedown', function(e){ e.preventDefault(); });
-    return acEl;
-  }
-
-  function highlightMatch(name, query){
-    if(!query) return escapeHtml(name);
-    const idx = name.toLowerCase().indexOf(query.toLowerCase());
-    if(idx === -1) return escapeHtml(name);
-    return escapeHtml(name.slice(0, idx)) +
-      '<span class="ac-match">' + escapeHtml(name.slice(idx, idx + query.length)) + '</span>' +
-      escapeHtml(name.slice(idx + query.length));
-  }
-
-  function positionAutocomplete(){
-    if(!acInput) return;
-    const el = ensureAutocompleteEl();
-    const rect = acInput.getBoundingClientRect();
-    el.style.left = Math.round(rect.left) + 'px';
-    el.style.top = Math.round(rect.bottom + 3) + 'px';
-    el.style.width = Math.max(rect.width, 220) + 'px';
+  function acGhostEl(input){
+    const wrap = input.closest('.mc-m-name-wrap');
+    return wrap ? wrap.querySelector('.mc-m-ghost') : null;
   }
 
   function renderAutocomplete(){
-    const el = ensureAutocompleteEl();
-    if(!acInput || !acMatches.length){ el.classList.remove('open'); return; }
-    const query = acInput.value.trim();
-    el.innerHTML = '<div class="mc-autocomplete-hint">Tab to fill in</div>' + acMatches.map(function(name, i){
-      return '<div class="mc-autocomplete-item' + (i === acActiveIndex ? ' active' : '') + '" data-idx="' + i + '">' +
-        highlightMatch(name, query) + '</div>';
-    }).join('');
-    Array.from(el.querySelectorAll('.mc-autocomplete-item')).forEach(function(item){
-      item.addEventListener('mousedown', function(e){
-        e.preventDefault();
-        acceptAutocomplete(parseInt(item.dataset.idx, 10));
-      });
-    });
-    el.classList.add('open');
-    positionAutocomplete();
+    if(!acInput) return;
+    const ghost = acGhostEl(acInput);
+    if(!ghost) return;
+    const query = acInput.value;
+    const suggestion = (acActiveIndex >= 0) ? acMatches[acActiveIndex] : null;
+    // Only ever show a suggestion that's a genuine continuation of what's
+    // already typed — never something that would overwrite characters.
+    if(!query || !suggestion || suggestion.toLowerCase().indexOf(query.toLowerCase()) !== 0){
+      ghost.innerHTML = '';
+      return;
+    }
+    ghost.innerHTML = '<span class="ac-typed">' + escapeHtml(query) + '</span>' +
+      '<span class="ac-suggest">' + escapeHtml(suggestion.slice(query.length)) + '</span>';
   }
 
   function openAutocomplete(input, cat){
-    const list = MISSION_NAME_LIBRARY[cat] || [];
-    const query = input.value.trim().toLowerCase();
-    const matches = list.filter(function(name){ return name.toLowerCase().indexOf(query) !== -1; }).slice(0, 8);
     acInput = input;
-    acMatches = matches;
-    acActiveIndex = matches.length ? 0 : -1;
+    const query = input.value;
+    if(!query){
+      // Nothing typed yet — no ghost text to show (avoids implying a
+      // mission name is already filled in when the field is empty).
+      acMatches = [];
+      acActiveIndex = -1;
+      renderAutocomplete();
+      return;
+    }
+    const list = MISSION_NAME_LIBRARY[cat] || [];
+    const q = query.toLowerCase();
+    acMatches = list.filter(function(name){ return name.toLowerCase().indexOf(q) === 0; }).slice(0, 8);
+    acActiveIndex = acMatches.length ? 0 : -1;
     renderAutocomplete();
   }
 
   function closeAutocomplete(){
+    const prevInput = acInput;
     acInput = null;
     acMatches = [];
     acActiveIndex = -1;
-    if(acEl) acEl.classList.remove('open');
+    if(prevInput){
+      const ghost = acGhostEl(prevInput);
+      if(ghost) ghost.innerHTML = '';
+    }
   }
 
   function moveAutocompleteActive(delta){
@@ -1793,24 +1794,25 @@
     renderAutocomplete();
   }
 
-  function acceptAutocomplete(idx){
-    if(idx == null) idx = acActiveIndex;
-    if(!acInput || idx < 0 || idx >= acMatches.length) return;
+  function currentAutocompleteSuggestion(){
+    if(!acInput || acActiveIndex < 0 || acActiveIndex >= acMatches.length) return null;
+    const query = acInput.value;
+    const suggestion = acMatches[acActiveIndex];
+    if(!query || suggestion.toLowerCase().indexOf(query.toLowerCase()) !== 0) return null;
+    return suggestion;
+  }
+
+  function acceptAutocomplete(){
+    const suggestion = currentAutocompleteSuggestion();
+    if(!suggestion) return;
     const input = acInput;
-    input.value = acMatches[idx];
+    input.value = suggestion;
     input.dispatchEvent(new Event('change', { bubbles:true }));
     closeAutocomplete();
     input.focus();
     const len = input.value.length;
     input.setSelectionRange(len, len);
   }
-
-  // Close the dropdown on any click outside the input or the dropdown itself.
-  document.addEventListener('mousedown', function(e){
-    if(!acEl || !acEl.classList.contains('open')) return;
-    if(acInput && (e.target === acInput || acEl.contains(e.target))) return;
-    closeAutocomplete();
-  });
 
   function bindMissionNameAutocomplete(card, slotId){
     const missionsEl = card.querySelector('.mc-missions');
@@ -1830,25 +1832,35 @@
 
     missionsEl.addEventListener('keydown', function(e){
       if(!e.target.classList.contains('mc-m-name')) return;
-      const acOpen = acEl && acEl.classList.contains('open') && acInput === e.target;
+      const hasSuggestion = acInput === e.target && !!currentAutocompleteSuggestion();
 
-      // Enter always finishes editing — accept the highlighted suggestion
-      // first (if the dropdown happens to be open), then get out of the field.
+      // Enter always finishes editing — accept the ghost suggestion first
+      // (if there is one), then get out of the field.
       if(e.key === 'Enter'){
         e.preventDefault();
-        if(acOpen) acceptAutocomplete(acActiveIndex);
+        if(hasSuggestion) acceptAutocomplete();
         e.target.blur();
         return;
       }
 
-      if(!acOpen) return;
+      if(acInput !== e.target) return;
       if(e.key === 'Tab'){
+        if(!hasSuggestion) return; // let Tab move focus normally when there's nothing to fill in
         e.preventDefault();
-        acceptAutocomplete(acActiveIndex);
+        acceptAutocomplete();
+      } else if(e.key === 'ArrowRight'){
+        // Also accept with → when the caret's already at the end of the
+        // typed text, mirroring native browser ghost-text autocomplete.
+        if(hasSuggestion && e.target.selectionStart === e.target.value.length && e.target.selectionEnd === e.target.value.length){
+          e.preventDefault();
+          acceptAutocomplete();
+        }
       } else if(e.key === 'ArrowDown'){
+        if(!acMatches.length) return;
         e.preventDefault();
         moveAutocompleteActive(1);
       } else if(e.key === 'ArrowUp'){
+        if(!acMatches.length) return;
         e.preventDefault();
         moveAutocompleteActive(-1);
       } else if(e.key === 'Escape'){
@@ -1930,12 +1942,21 @@
       timerInput.value = formatCountdown(liveRemainingSec(catData) * 1000);
     }
 
+    // The mission rows (including whichever input the ghost-text
+    // autocomplete is currently attached to) are about to be torn down and
+    // rebuilt from scratch — drop any reference to the old input first so
+    // nothing is left pointing at a detached node.
+    if(acInput && card.contains(acInput)) closeAutocomplete();
+
     const missionsHtml = catData.missions.map(function(m, idx){
       const pct = missionPct(m);
       const complete = m.target > 0 && m.current >= m.target;
       return '<div class="mc-mission-row' + (complete ? ' mc-complete' : '') + '" data-idx="' + idx + '">' +
         '<div class="mc-m-top">' +
-          '<input type="text" class="mc-m-name" value="' + escapeHtml(m.name) + '" placeholder="Mission name">' +
+          '<div class="mc-m-name-wrap">' +
+            '<div class="mc-m-ghost" aria-hidden="true"></div>' +
+            '<input type="text" class="mc-m-name" value="' + escapeHtml(m.name) + '" placeholder="Mission name" autocomplete="off" spellcheck="false">' +
+          '</div>' +
           '<div class="mc-m-nums">' +
             '<input type="text" inputmode="numeric" class="mc-m-current" value="' + m.current + '" title="Scroll to adjust">' +
             '<span class="mc-m-slash">/</span>' +
@@ -2388,7 +2409,7 @@
     if(appState.slots.length === 0){
       addSlot();
     } else {
-      appState.slots.slice().forEach(function(s){ addSlot(s); });
+      appState.slots.slice().forEach(function(s){ addSlot(s, true); });
     }
     renumber();
     recalcGlobalFooter();
@@ -2725,12 +2746,65 @@
   }
 
   const CAT_LETTER_TO_INDEX = { h:0, d:1, w:2, m:3 };
+  const CAT_ORDER = ['HR','DA','WK','MO'];
 
   function catDigitFromChar(ch){
     if(ch == null) return null;
     if(/^[1-4]$/.test(ch)) return parseInt(ch, 10);
     const idx = CAT_LETTER_TO_INDEX[ch.toLowerCase()];
     return (idx != null) ? idx + 1 : null;
+  }
+
+  // --- "M" mission-table-edit sequence: M -> [slot digit] -> category (h/d/w/m or 1-4) -> mission digit ---
+  // A separate buffer/timeout from the toggle sequence above so the two
+  // never interfere with each other's state.
+  let mtBuffer = '';
+  let mtTimeout = null;
+  let mtHighlighted = [];
+
+  function clearMtHighlights(){
+    mtHighlighted.forEach(function(el){ el.classList.remove('kb-flash'); });
+    mtHighlighted = [];
+    document.getElementById('kb-indicator').classList.remove('active');
+  }
+
+  function restartMtTimeout(){
+    clearTimeout(mtTimeout);
+    mtTimeout = setTimeout(function(){ mtBuffer = ''; clearMtHighlights(); }, 1500);
+  }
+
+  function endMtSequence(){
+    mtBuffer = '';
+    clearTimeout(mtTimeout);
+    setTimeout(clearMtHighlights, 300);
+  }
+
+  function highlightMtBuffer(rows, needsSlotDigit, slotStageLen){
+    clearMtHighlights();
+    const indicator = document.getElementById('kb-indicator');
+    indicator.classList.add('active');
+
+    let row = null;
+    if(needsSlotDigit){
+      if(mtBuffer.length >= 2){
+        const rowIdx = parseInt(mtBuffer[1],10) - 1;
+        row = (rowIdx >= 0 && rowIdx < rows.length) ? rows[rowIdx] : null;
+      }
+    } else {
+      row = rows[0];
+    }
+    if(row){ row.classList.add('kb-flash'); mtHighlighted.push(row); }
+
+    const catIndex = slotStageLen;
+    if(row && mtBuffer.length > catIndex){
+      const catDigit = catDigitFromChar(mtBuffer[catIndex]);
+      if(catDigit != null){
+        const group = row.querySelectorAll('.mission-group')[catDigit-1];
+        if(group){ group.classList.add('kb-flash'); mtHighlighted.push(group); }
+      }
+    }
+
+    indicator.textContent = 'EDIT: ' + mtBuffer.split('').join(' → ');
   }
 
   function highlightKbBuffer(rows, needsSlotDigit){
@@ -2770,6 +2844,9 @@
         kbBuffer = '';
         clearTimeout(kbTimeout);
         clearKbHighlights();
+        mtBuffer = '';
+        clearTimeout(mtTimeout);
+        clearMtHighlights();
         if(document.getElementById('shortcuts-modal').classList.contains('open')) toggleShortcuts();
         closeImportExportMenu();
         if(document.getElementById('import-report-modal').classList.contains('open')) closeImportReportModal();
@@ -2805,6 +2882,63 @@
       const isCatLetter = /^[hdwm]$/.test(key);
       const isR = key === 'r';
       const isS = key === 's';
+      const isM = key === 'm';
+
+      // --- "M" mission-table-edit sequence: M -> [slot digit] -> category -> mission digit.
+      // Takes priority over the toggle sequence when nothing else is in
+      // progress; once started it consumes its own keys via mtBuffer,
+      // completely separate from kbBuffer above.
+      if(mtBuffer !== '' || (isM && kbBuffer === '' && !e.ctrlKey && !e.metaKey && !e.altKey)){
+        const mtNeedsSlotDigit = rows.length > 1;
+        const mtSlotStageLen = mtNeedsSlotDigit ? 2 : 1;
+        const mtCatStageLen = mtSlotStageLen + 1;
+
+        if(mtBuffer === ''){
+          e.preventDefault();
+          mtBuffer = 'm';
+          restartMtTimeout();
+          highlightMtBuffer(rows, mtNeedsSlotDigit, mtSlotStageLen);
+          return;
+        }
+
+        // Stage: slot digit (only when there's more than one slot)
+        if(mtBuffer.length === 1 && mtNeedsSlotDigit){
+          if(!isDigit){ mtBuffer = ''; clearTimeout(mtTimeout); clearMtHighlights(); return; }
+          e.preventDefault();
+          mtBuffer += e.key;
+          restartMtTimeout();
+          highlightMtBuffer(rows, mtNeedsSlotDigit, mtSlotStageLen);
+          return;
+        }
+
+        // Stage: category — digit 1-4 OR letter h/d/w/m
+        if(mtBuffer.length === mtSlotStageLen){
+          const isCatDigit = /^[1-4]$/.test(e.key);
+          if(!isCatDigit && !isCatLetter){ mtBuffer = ''; clearTimeout(mtTimeout); clearMtHighlights(); return; }
+          e.preventDefault();
+          mtBuffer += (isCatLetter ? key : e.key);
+          restartMtTimeout();
+          highlightMtBuffer(rows, mtNeedsSlotDigit, mtSlotStageLen);
+          return;
+        }
+
+        // Stage: mission digit — jumps straight into editing that mission's name
+        if(mtBuffer.length === mtCatStageLen){
+          if(!isDigit){ mtBuffer = ''; clearTimeout(mtTimeout); clearMtHighlights(); return; }
+          e.preventDefault();
+          const slotIdx = mtNeedsSlotDigit ? (parseInt(mtBuffer[1],10) - 1) : 0;
+          const catDigit = catDigitFromChar(mtBuffer[mtSlotStageLen]);
+          const missDigit = parseInt(e.key,10);
+          endMtSequence();
+          triggerMissionEditShortcut(slotIdx, catDigit, missDigit);
+          return;
+        }
+
+        mtBuffer = '';
+        clearTimeout(mtTimeout);
+        clearMtHighlights();
+        return;
+      }
 
       if(!isDigit && !isCatLetter && !isR && !isS) return;
 
@@ -2893,6 +3027,46 @@
     toggleMission(btn);
     btn.classList.add('kb-toggled');
     setTimeout(function(){ btn.classList.remove('kb-toggled'); }, 400);
+  }
+
+  // Jumps to a specific mission's name field on the mission-tracker card —
+  // switches that card to the right category tab if needed, scrolls it
+  // into view, then focuses and selects the name text so you can just
+  // start typing over it. Triggered by the M -> slot -> category -> mission
+  // keyboard sequence (see bindKeyboardShortcuts).
+  function triggerMissionEditShortcut(slotIdx, catDigit, missDigit){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    if(catDigit < 1 || catDigit > 4) return;
+    if(missDigit < 1 || missDigit > 4) return;
+    const row = rows[slotIdx];
+    const slotId = row.id;
+    const cat = CAT_ORDER[catDigit-1];
+    const card = getMissionCard(slotId);
+    if(!card) return;
+
+    const data = getMissionData(slotId);
+    if(data.activeCat !== cat){
+      data.activeCat = cat;
+      persistMissionState();
+      renderMissionCatBody(card);
+    }
+
+    card.scrollIntoView({ behavior:'smooth', block:'center' });
+    card.classList.add('kb-flash');
+    setTimeout(function(){ card.classList.remove('kb-flash'); }, 500);
+
+    const missionRow = card.querySelectorAll('.mc-mission-row')[missDigit-1];
+    const nameInput = missionRow ? missionRow.querySelector('.mc-m-name') : null;
+    if(nameInput){
+      // Let the smooth scroll settle before stealing focus — focusing mid-scroll
+      // can make the browser snap the viewport back to the old position.
+      setTimeout(function(){
+        nameInput.focus();
+        nameInput.select();
+      }, 220);
+    }
+    showToast('Editing ' + CAT_NAMES[cat] + ' mission ' + missDigit + ' — Slot ' + (slotIdx+1));
   }
 
   function triggerCategoryResetShortcut(slotIdx, catDigit){
@@ -3027,7 +3201,7 @@
     if(appState.slots.length === 0){
       addSlot();
     } else {
-      appState.slots.slice().forEach(function(s){ addSlot(s); });
+      appState.slots.slice().forEach(function(s){ addSlot(s, true); });
     }
     renumber();
     recalcGlobalFooter();
