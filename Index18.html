@@ -1,0 +1,2938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BloxStrike Account Tracker</title>
+<link rel="icon" href="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0A0B0D;
+    --panel:#131417;
+    --panel-alt:#17181C;
+    --text:#E8E6E1;
+    --muted:#8B8D93;
+    --border: rgba(255,255,255,0.09);
+    --border-strong: rgba(255,255,255,0.18);
+    --brass:#C9A227;
+    --brass-dim: rgba(201,162,39,0.35);
+    --complete:#2F9E5B;
+    --incomplete:#B03A3A;
+    --progress-start:#2F9E5B;
+    --progress-end:#C9A227;
+    --cat-hr:#4A7FA6;
+    --cat-da:#3A8F6D;
+    --cat-wk:#7B5EA7;
+    --cat-mo:#C9A227;
+    --toast-accent:#FFFFFF;
+    --toast-text:#FFFFFF;
+    --notif-warn:#E14C4C;
+    --radius: 3px;
+    --font-display: 'Chakra Petch', 'Segoe UI', sans-serif;
+    --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  }
+
+  *{ box-sizing: border-box; }
+
+  ::selection{ background: var(--brass-dim); color:#fff; }
+
+  /* ---------- Themed scrollbars ---------- */
+  *{ scrollbar-width: thin; scrollbar-color: var(--border-strong) var(--panel-alt); }
+  *::-webkit-scrollbar{ width:9px; height:9px; }
+  *::-webkit-scrollbar-track{ background: var(--panel-alt); }
+  *::-webkit-scrollbar-thumb{ background: var(--border-strong); border-radius:5px; border:2px solid var(--panel-alt); }
+  *::-webkit-scrollbar-thumb:hover{ background: var(--brass-dim); }
+  *::-webkit-scrollbar-corner{ background: var(--panel-alt); }
+
+  body{
+    margin:0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-display);
+    padding: 16px;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app-shell{ max-width:1220px; margin:0 auto; }
+
+  :focus-visible{ outline: 2px solid var(--brass); outline-offset: 1px; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition: none !important; animation: none !important; }
+  }
+
+  /* ---------- Panels & signature corner brackets ---------- */
+  .hud-panel{
+    position:relative;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+  }
+  .hud-panel::before, .hud-panel::after{
+    content:'';
+    position:absolute;
+    width:10px; height:10px;
+    pointer-events:none;
+    opacity:0.6;
+  }
+  .hud-panel::before{ top:-1px; left:-1px; border-top:2px solid var(--brass); border-left:2px solid var(--brass); }
+  .hud-panel::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--brass); border-right:2px solid var(--brass); }
+
+  /* ---------- Header ---------- */
+  .top-bar{ display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; flex-wrap:wrap; gap:8px 10px; overflow:visible; container-type: inline-size; }
+  .brand{ font-weight:700; font-size:16px; letter-spacing:1.2px; display:flex; align-items:center; gap:7px; flex-shrink:0; }
+  .brand-mark-icon{ flex-shrink:0; display:block; width:18px; height:18px; }
+  .brand-sub{ font-size:11px; font-weight:500; color: var(--muted); letter-spacing:0.7px; white-space:nowrap; }
+  .top-actions{ display:flex; gap:6px; align-items:center; flex-wrap:wrap; flex-shrink:0; }
+
+  .btn-short{ display:none; }
+  @container (max-width: 1080px){
+    .btn-full{ display:none; }
+    .btn-short{ display:inline; }
+  }
+
+  .btn{
+    background: var(--panel-alt);
+    border:1px solid var(--border-strong);
+    color: var(--text);
+    font-family: var(--font-display);
+    font-weight:600;
+    font-size:10.5px;
+    letter-spacing:0.3px;
+    
+    padding:7px 9px;
+    border-radius:2px;
+    cursor:pointer;
+    white-space:nowrap;
+    flex-shrink:0;
+    transition: background .15s ease, border-color .15s ease, color .15s ease;
+  }
+  .btn:hover{ background: rgba(255,255,255,0.06); border-color: var(--brass-dim); }
+  .btn-danger{ color: var(--incomplete); border-color: rgba(176,58,58,0.4); }
+  .btn-danger:hover{ background: rgba(176,58,58,0.12); }
+
+  .icon-btn{
+    width:30px; height:30px;
+    flex-shrink:0;
+    display:flex; align-items:center; justify-content:center;
+    background: var(--panel-alt);
+    border:1px solid var(--border-strong);
+    color: var(--text);
+    cursor:pointer;
+    border-radius:2px;
+    font-size:15px;
+  }
+  .icon-btn:hover{ border-color: var(--brass); color: var(--brass); }
+  .icon-btn:disabled{ opacity:0.35; cursor:default; pointer-events:none; }
+
+  /* ---------- Unsaved notification (bottom-fixed) ---------- */
+  .unsaved-banner{
+    position:fixed;
+    bottom:68px;
+    left:50%;
+    transform:translateX(-50%);
+    width:420px;
+    max-width:92vw;
+    text-align:center;
+    background: var(--panel);
+    border:1px solid var(--toast-accent);
+    color: var(--toast-text);
+    font-size:11px;
+    line-height:1.4;
+    padding:9px 16px;
+    border-radius:3px;
+    letter-spacing:0.3px;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+    z-index:150;
+  }
+  .unsaved-banner.hidden{ display:none; }
+  .unsaved-banner .notif-warn-icon{ color: var(--notif-warn); font-weight:700; }
+
+  /* ---------- Layout ---------- */
+  .layout{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
+  .main-panel{ flex:1 1 0; min-width:0; }
+
+
+
+  /* ---------- Table ---------- */
+  .table-scroll{ overflow-x:auto; }
+  table{ width:100%; border-collapse:collapse; table-layout:fixed; }
+  th, td{ padding:5px 4px; text-align:center; vertical-align:middle; font-size:12px; }
+  thead th{
+    font-size:10px; letter-spacing:0.4px; color: var(--muted);
+    border-bottom:2px solid var(--brass-dim); padding-bottom:6px; font-weight:700;
+    white-space:normal; line-height:1.2;
+  }
+  thead th.th-nowrap{ white-space:nowrap; }
+  tbody tr{ border-bottom:1px solid var(--border); color: var(--row-text, var(--text)); }
+  tbody tr td{ background: var(--row-bg, var(--panel-alt)); }
+  tbody tr:hover td{ filter: brightness(1.08); }
+  tr.dragging{ opacity:0.4; }
+  tr.drag-over{ outline:1px dashed var(--brass); }
+  tr.slot-row.dirty{ box-shadow: inset 3px 0 0 var(--brass); }
+
+  .drag-handle{ cursor:grab; color: var(--muted); font-size:13px; user-select:none; }
+  .slot-num{ font-family: var(--font-mono); color: var(--muted); font-size:12px; }
+
+  input[type=text]{
+    width:100%; box-sizing:border-box; background:transparent; border:none; border-bottom:1px solid transparent;
+    color:inherit; font-family: var(--font-mono); font-size:12px; text-align:center; padding:2px 3px; border-radius:2px;
+  }
+  input[type=text]:focus{ outline:none; border-bottom-color: var(--brass); background: rgba(255,255,255,0.03); }
+  input[type=text].f-level, input[type=text].f-credits{ cursor: ns-resize; }
+  .f-name{ text-align:left !important; font-family: var(--font-display); font-weight:600; }
+  .f-time{ font-size:10px; color: var(--muted); font-family: var(--font-mono); }
+  .rank-row{ display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-height:36px; min-width:112px; margin:0 auto; }
+  .f-rank-name{ font-size:9px; color: var(--muted); letter-spacing:0.3px; white-space:nowrap; flex-shrink:0; line-height:1.2; }
+  input[type=text].f-level{ width:32px; flex-shrink:0; }
+
+  /* ---------- Quick Play (now lives in the top bar) ---------- */
+  .panel-head{ font-size:13px; font-weight:700; letter-spacing:1px; color: var(--text); margin-bottom:10px; }
+  .play-btn{
+    display:inline-block; background: var(--complete); color:#04150B;
+    font-family: var(--font-display); font-weight:700; font-size:10px; letter-spacing:0.3px;
+    padding:7px 9px; border-radius:2px; text-decoration:none;
+    transition: filter .15s ease; white-space:nowrap; flex-shrink:0;
+  }
+  .play-btn:hover{ filter:brightness(1.12); }
+  .top-actions-divider{ width:1px; align-self:stretch; background: var(--border-strong); margin:0 2px; flex-shrink:0; }
+
+  /* ---------- Import/Export dropdown ---------- */
+  .dropdown-wrap{ position:relative; display:inline-block; flex-shrink:0; }
+  .dropdown-menu{
+    position:absolute; top:calc(100% + 6px); right:0; min-width:180px;
+    background: var(--panel); border:1px solid var(--border-strong); border-radius:3px;
+    padding:5px; z-index:120; display:none;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+  }
+  .dropdown-menu.open{ display:block; }
+  .dropdown-item{
+    display:block; width:100%; text-align:left; background:transparent; border:none;
+    color: var(--text); font-family: var(--font-display); font-weight:600; font-size:11.5px;
+    letter-spacing:0.3px; padding:8px 10px; border-radius:2px; cursor:pointer;
+  }
+  .dropdown-item:hover{ background: rgba(255,255,255,0.07); color: var(--brass); }
+  .dropdown-item .di-hint{ color: var(--muted); font-size:9px; font-weight:500; letter-spacing:0.4px; margin-left:2px; }
+  .dropdown-item:hover .di-hint{ color: inherit; opacity:0.75; }
+  .dropdown-divider{ height:1px; background: var(--border); margin:4px 2px; }
+
+  /* ---------- Import Report modal ---------- */
+  .import-report-modal{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:480px; max-width:90vw; padding:16px; z-index:210; display:none;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+  }
+  .import-report-modal.open{ display:block; }
+  .import-report-modal textarea{
+    width:100%; height:220px; resize:vertical; box-sizing:border-box;
+    background: var(--panel-alt); border:1px solid var(--border-strong); color: var(--text);
+    font-family: var(--font-mono); font-size:11px; padding:8px; border-radius:2px; margin-bottom:10px;
+  }
+  .import-report-modal textarea:focus{ outline:none; border-color: var(--brass); }
+  .import-report-actions{ display:flex; gap:8px; justify-content:flex-end; }
+
+  /* ---------- Mission Tracker ---------- */
+  .mc-note-wrap{ margin-top:12px; }
+  .mc-note-wrap .panel-head{ margin-bottom:4px; }
+  .mc-global-note{ font-size:10.5px; line-height:1.4; color: var(--muted); font-style:italic; white-space:nowrap; overflow-x:auto; overflow-y:hidden; padding-bottom:2px; }
+  .mission-tracker-container{ display:grid; grid-template-columns:repeat(2, 1fr); gap:9px; margin-top:10px; align-items:start; }
+  @media (max-width: 720px){ .mission-tracker-container{ grid-template-columns:1fr; } }
+  .mission-card{ position:relative; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius); padding:8px 10px; min-width:0; }
+  .mission-card::before, .mission-card::after{ content:''; position:absolute; width:10px; height:10px; pointer-events:none; opacity:0.6; }
+  .mission-card::before{ top:-1px; left:-1px; border-top:2px solid var(--brass); border-left:2px solid var(--brass); }
+  .mission-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--brass); border-right:2px solid var(--brass); }
+
+  .mc-head{ display:flex; align-items:center; gap:8px; margin-bottom:6px; flex-wrap:wrap; }
+  .mc-slot-num{ font-family: var(--font-mono); color: var(--muted); font-size:11px; flex-shrink:0; }
+  .mc-name{ font-weight:700; font-size:13px; letter-spacing:0.3px; flex-shrink:0; }
+  .mc-stars{ display:flex; align-items:center; gap:6px; margin-left:auto; min-width:0; }
+  .mc-stars-label{ font-size:9.5px; letter-spacing:0.5px; color: var(--muted); white-space:nowrap; flex-shrink:0; }
+  .mc-stars-row{ display:flex; gap:3px; }
+  .mc-star-col{ display:flex; justify-content:center; min-width:0; }
+  .mc-star-btn{
+    position:relative; display:inline-flex; align-items:center; justify-content:center;
+    font-size:30px; line-height:1; cursor:pointer; user-select:none;
+    color:rgba(255,255,255,0.15); transition:color .15s, text-shadow .15s;
+  }
+  .mc-star-btn.mc-star-active{ color: var(--brass); text-shadow: 0 0 5px var(--brass-dim); }
+  .mc-star-reward{
+    position:absolute; top:58%; left:50%; transform:translate(-50%,-50%);
+    font-size:8.5px; font-family: var(--font-mono); font-weight:700; letter-spacing:0;
+    color: var(--text); pointer-events:none; display:flex; align-items:center; justify-content:center;
+  }
+  .mc-star-btn.mc-star-active .mc-star-reward{ color:#1a1400; }
+
+  .mc-tabs{ display:flex; gap:4px; margin-top:6px; }
+  .mc-tab{
+    flex:1; background: var(--panel-alt); border:1px solid var(--border-strong); color: var(--muted);
+    font-family: var(--font-display); font-weight:700; font-size:10px; letter-spacing:0.5px; 
+    padding:4px 6px; border-radius:2px; cursor:pointer; transition: all .15s ease;
+  }
+  .mc-tab.cat-hr.mc-tab-active{ background: var(--cat-hr); border-color: var(--cat-hr); color:#04131D; }
+  .mc-tab.cat-da.mc-tab-active{ background: var(--cat-da); border-color: var(--cat-da); color:#03150D; }
+  .mc-tab.cat-wk.mc-tab-active{ background: var(--cat-wk); border-color: var(--cat-wk); color:#160F1D; }
+  .mc-tab.cat-mo.mc-tab-active{ background: var(--cat-mo); border-color: var(--cat-mo); color:#1A1400; }
+  .mc-tab.cat-hr:not(.mc-tab-active){ color: var(--cat-hr); }
+  .mc-tab.cat-da:not(.mc-tab-active){ color: var(--cat-da); }
+  .mc-tab.cat-wk:not(.mc-tab-active){ color: var(--cat-wk); }
+  .mc-tab.cat-mo:not(.mc-tab-active){ color: var(--cat-mo); }
+  .mc-tab:not(.mc-tab-active):hover{ border-color: var(--brass-dim); color: var(--text); }
+
+  .mc-cat-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:4px; }
+  .mc-cat-title{ font-size:11px; font-weight:700; letter-spacing:0.6px; }
+  .mc-timer-wrap{ display:flex; align-items:center; gap:5px; }
+  input.mc-timer{
+    width:88px; background: var(--panel-alt); border:1px solid var(--border-strong); color: var(--text);
+    font-family: var(--font-mono); font-size:11px; text-align:center; padding:2px 4px; border-radius:2px; cursor:text;
+  }
+  input.mc-timer:focus{ outline:none; border-color: var(--brass); }
+  .mc-timer-reset{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:18px; height:18px; cursor:pointer; color: var(--muted); font-size:14px; user-select:none;
+  }
+  .mc-timer-reset:hover{ color: var(--brass); }
+
+  .mc-missions{ display:flex; flex-direction:column; gap:3px; }
+  .mc-mission-row{ display:flex; flex-direction:column; gap:2px; background: var(--panel-alt); border:1px solid var(--border); border-radius:2px; padding:4px 8px; }
+  .mc-m-top{ display:flex; align-items:center; gap:6px; }
+  .mc-m-bottom{ display:flex; align-items:center; gap:6px; }
+  input.mc-m-reward{
+    width:26px; flex-shrink:0; background:transparent; border:none; border-bottom:1px solid transparent;
+    color: var(--brass); font-family: var(--font-mono); font-weight:700; font-size:10px; text-align:center; padding:1px;
+    cursor: ns-resize;
+  }
+  input.mc-m-reward::before{ content:'x'; }
+  input.mc-m-reward:focus{ outline:none; border-bottom-color: var(--brass); }
+  input.mc-m-name{
+    flex:1 1 auto; min-width:0; background:transparent; border:none; border-bottom:1px solid transparent;
+    color: var(--text); font-family: var(--font-display); font-weight:600; font-size:12px; padding:1px 2px;
+  }
+  input.mc-m-name:focus{ outline:none; border-bottom-color: var(--brass); background: rgba(255,255,255,0.03); }
+
+  /* ---------- Mission name autocomplete ---------- */
+  .mc-autocomplete{
+    position:fixed; z-index:300; background: var(--panel); border:1px solid var(--border-strong);
+    border-radius:2px; max-height:190px; overflow-y:auto; display:none;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.55);
+  }
+  .mc-autocomplete.open{ display:block; }
+  .mc-autocomplete-item{
+    padding:6px 10px; font-size:11px; font-family: var(--font-display); color: var(--text);
+    cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; border-bottom:1px solid var(--border);
+  }
+  .mc-autocomplete-item:last-child{ border-bottom:none; }
+  .mc-autocomplete-item:hover, .mc-autocomplete-item.active{ background: rgba(255,255,255,0.07); }
+  .mc-autocomplete-item .ac-match{ color: var(--brass); font-weight:700; }
+  .mc-autocomplete-hint{
+    padding:5px 10px; font-size:9.5px; letter-spacing:0.5px; color: var(--muted);
+    border-bottom:1px solid var(--border); background: rgba(255,255,255,0.02);
+  }
+  .mc-m-bar{ flex:1 1 auto; min-width:40px; height:6px; background: rgba(255,255,255,0.06); border-radius:4px; overflow:hidden; }
+  .mc-m-fill{ height:100%; background: linear-gradient(90deg, var(--progress-start), var(--progress-end)); border-radius:4px; transition:width .2s ease; }
+  .mc-m-nums{ display:flex; align-items:center; gap:2px; flex-shrink:0; }
+  input.mc-m-current, input.mc-m-target{
+    width:28px; background:transparent; border:none; border-bottom:1px solid transparent;
+    color: inherit; font-family: var(--font-mono); font-size:11px; text-align:center; padding:1px;
+    cursor: ns-resize;
+  }
+  input.mc-m-current:focus, input.mc-m-target:focus{ outline:none; border-bottom-color: var(--brass); }
+  .mc-m-slash{ color: var(--muted); font-family: var(--font-mono); font-size:11px; }
+  .mc-mission-row.mc-complete{ box-shadow: inset 3px 0 0 var(--complete); }
+  .mc-mission-row.mc-complete input.mc-m-current{ color: var(--complete); font-weight:700; }
+
+  .stars-row{ display:flex; gap:3px; justify-content:center; align-items:center; }
+  .star-btn{ font-size:16px; cursor:pointer; user-select:none; color:rgba(255,255,255,0.15); transition:color .15s, text-shadow .15s; }
+  .star-active{ color: var(--brass); text-shadow: 0 0 5px var(--brass-dim); }
+
+  .mini-reset{ cursor:pointer; color: var(--muted); font-size:13px; line-height:1; user-select:none; margin-left:5px; }
+  .mini-reset:hover{ color: var(--brass); }
+
+  .cat-label{ font-size:9.5px; letter-spacing:0.4px; margin-bottom:3px; display:flex; justify-content:center; align-items:center; gap:4px; opacity:0.9; }
+  .cat-count{ font-family: var(--font-mono); opacity:0.85; }
+  .cat-hr .cat-label{ color: var(--cat-hr); }
+  .cat-da .cat-label{ color: var(--cat-da); }
+  .cat-wk .cat-label{ color: var(--cat-wk); }
+  .cat-mo .cat-label{ color: var(--cat-mo); }
+  .mission-group{ display:flex; gap:3px; justify-content:center; padding:4px; border-radius:2px; border:1px solid var(--border); }
+  .cat-hr .mission-group{ border-color: rgba(74,127,166,0.45); }
+  .cat-da .mission-group{ border-color: rgba(58,143,109,0.45); }
+  .cat-wk .mission-group{ border-color: rgba(123,94,167,0.45); }
+  .cat-mo .mission-group{ border-color: rgba(201,162,39,0.45); }
+  .mission-btn{ width:14px; height:14px; border-radius:3px; cursor:pointer; transition: transform .08s ease; }
+  .mission-btn:active{ transform: scale(0.85); }
+  .bg-complete{ background: var(--complete); }
+  .bg-incomplete{ background: var(--incomplete); }
+
+
+  .save-wrap{ display:flex; flex-direction:row; align-items:center; justify-content:center; gap:7px; }
+  .save-btn{
+    background: var(--complete);
+    color:#04150B;
+    border:none;
+    font-family: var(--font-display);
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:0.4px;
+    padding:5px 8px;
+    cursor:pointer;
+    border-radius:2px;
+    
+    transition: background .2s ease, opacity .2s ease;
+  }
+  .save-btn.just-saved{ background: var(--brass); color:#1a1400; }
+  tr.slot-row:not(.dirty) .save-btn{ opacity:0.4; }
+
+  .remove-btn{ cursor:pointer; color: var(--muted); font-size:15px; flex-shrink:0; }
+  .remove-btn:hover{ color: var(--incomplete); }
+
+  /* keyboard shortcut flash */
+  .kb-flash{ outline:2px solid var(--brass); outline-offset:1px; }
+  .mission-btn.kb-toggled{ box-shadow: 0 0 0 2px var(--brass); }
+
+  /* ---------- Global footer stat strip ---------- */
+  .global-footer{ display:flex; flex-wrap:nowrap; gap:10px; margin-top:14px; padding-top:10px; border-top:1px solid var(--border); overflow-x:auto; }
+  .gf-item{ display:flex; flex-direction:column; min-width:58px; flex-shrink:0; }
+  .gf-label{ font-size:8.5px; color: var(--muted); letter-spacing:0.4px; margin-bottom:2px; white-space:nowrap; }
+  .gf-value{ font-family: var(--font-mono); font-weight:700; font-size:13px; white-space:nowrap; }
+  .gf-row{ display:flex; align-items:baseline; }
+  .gf-pct{ font-family: var(--font-mono); font-weight:600; font-size:9.5px; color: var(--muted); margin-left:3px; }
+  .gf-divider{ width:1px; background: var(--border); margin:0 2px; flex-shrink:0; }
+  .gf-item.cat-hr .gf-value{ color: var(--cat-hr); }
+  .gf-item.cat-da .gf-value{ color: var(--cat-da); }
+  .gf-item.cat-wk .gf-value{ color: var(--cat-wk); }
+  .gf-item.cat-mo .gf-value{ color: var(--cat-mo); }
+
+  /* ---------- Side panels ---------- */
+  .panel-note{ font-size:11px; color: var(--muted); line-height:1.5; margin:0 0 10px; }
+
+  .shortcuts-table{ width:100%; border-collapse:collapse; font-size:12.5px; }
+  .shortcuts-table th{ text-align:left; font-size:10px; letter-spacing:0.5px; color:var(--muted); border-bottom:2px solid var(--brass-dim); padding:0 8px 7px; }
+  .shortcuts-table td{ padding:8px 8px; border-bottom:1px solid var(--border); color: var(--muted); vertical-align:top; }
+  .shortcuts-table tr:last-child td{ border-bottom:none; }
+  .shortcuts-table td:first-child{ color: var(--text); white-space:nowrap; width:1%; }
+  .kbd{ display:inline-block; background: var(--panel-alt); border:1px solid var(--border-strong); border-radius:2px; padding:2px 6px; font-family: var(--font-mono); font-size:11px; color: var(--text); }
+
+  /* ---------- Custom color swatch (replaces native color input) ---------- */
+  button.color-swatch{
+    -webkit-appearance:none; appearance:none;
+    width:42px; height:23px; border:1px solid var(--border-strong); border-radius:2px;
+    padding:0; cursor:pointer; display:inline-block;
+  }
+  button.color-swatch:hover{ border-color: var(--brass); }
+
+  /* ---------- Color picker popover ---------- */
+  .color-popover{
+    position:fixed; z-index:300; background: var(--panel); border:1px solid var(--border-strong);
+    border-radius:4px; padding:10px; box-shadow:0 10px 28px rgba(0,0,0,0.55);
+    display:none; width:172px;
+  }
+  .color-popover.open{ display:block; }
+  .cp-sv{ position:relative; width:100%; height:100px; border-radius:2px; margin-bottom:8px; cursor:crosshair; overflow:hidden; }
+  .cp-sv-white, .cp-sv-black{ position:absolute; inset:0; pointer-events:none; }
+  .cp-sv-white{ background: linear-gradient(to right, #fff, rgba(255,255,255,0)); }
+  .cp-sv-black{ background: linear-gradient(to top, #000, rgba(0,0,0,0)); }
+  .cp-sv-cursor{ position:absolute; width:10px; height:10px; border:2px solid #fff; border-radius:50%; box-shadow:0 0 2px rgba(0,0,0,0.8); transform:translate(-50%,-50%); pointer-events:none; }
+  .cp-hue{ position:relative; width:100%; height:11px; border-radius:2px; margin-bottom:8px; cursor:pointer;
+    background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000); }
+  .cp-hue-cursor{ position:absolute; top:-2px; width:6px; height:15px; background:#fff; border:1px solid #000; border-radius:2px; transform:translateX(-50%); pointer-events:none; }
+  .cp-hex-row{ display:flex; align-items:center; gap:4px; font-family: var(--font-mono); font-size:10.5px; color: var(--muted); margin-bottom:8px; }
+  .cp-hex-row input{ flex:1; width:auto; background: var(--panel-alt); border:1px solid var(--border-strong); color: var(--text); font-family: var(--font-mono); font-size:10.5px; padding:4px 6px; border-radius:2px; text-transform:uppercase; text-align:left; }
+  .cp-presets{ display:flex; flex-wrap:wrap; gap:4px; }
+  .cp-preset{ width:15px; height:15px; border-radius:2px; border:1px solid var(--border); cursor:pointer; }
+
+  /* ---------- Settings drawer (floating card, not edge-docked) ---------- */
+  .overlay{ position:fixed; inset:0; background: rgba(0,0,0,0.55); opacity:0; pointer-events:none; transition: opacity .2s ease; z-index:90; }
+  .overlay.active{ opacity:1; pointer-events:auto; }
+
+  .settings-drawer{
+    position:fixed; top:16px; bottom:16px; right:-360px; width:310px; max-width:88vw;
+    background: var(--panel); border:1px solid var(--border-strong); border-radius:6px;
+    padding:16px; transition:right .25s ease; overflow-y:auto; z-index:100;
+    box-shadow: 0 12px 34px rgba(0,0,0,0.55);
+  }
+  .settings-drawer.open{ right:16px; }
+  .drawer-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; border-bottom:1px solid var(--border); padding-bottom:9px; }
+  .drawer-head h3{ margin:0; font-size:13px; letter-spacing:1px; }
+  .close-btn{ cursor:pointer; color: var(--muted); font-size:16px; }
+  .close-btn:hover{ color: var(--text); }
+
+  .settings-drawer h4{ font-size:10px; letter-spacing:0.5px; color: var(--muted); margin:14px 0 8px; }
+  .setting-group{ display:flex; align-items:center; justify-content:space-between; margin-bottom:9px; }
+  .setting-group label{ font-size:10px; letter-spacing:0.5px; color: var(--muted); }
+  .swatch-row{ display:flex; align-items:center; gap:6px; }
+  .swatch-row .mini-reset{ margin-left:0; }
+
+  .slot-style-block{ background: var(--panel-alt); border:1px solid var(--border); border-radius:2px; padding:8px; margin-bottom:8px; }
+  .slot-style-block h5{ margin:0 0 6px; font-size:9px; color: var(--muted); }
+  .style-row{ display:flex; gap:12px; }
+  .style-row label{ display:flex; flex-direction:column; gap:3px; font-size:8px; color: var(--muted); }
+
+  .shortcuts-modal{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%);
+    width:440px; max-width:90vw; max-height:80vh; overflow-y:auto;
+    padding:16px; z-index:210; display:none;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.6);
+  }
+  .shortcuts-modal.open{ display:block; }
+
+  hr{ border:0; border-top:1px solid var(--border); margin:14px 0; }
+
+  /* ---------- Toast & keyboard indicator (bottom-stacked, same corner as the unsaved-work notice) ---------- */
+  .toast{
+    position:fixed; bottom:112px; left:50%; transform:translateX(-50%) translateY(20px);
+    background: var(--panel); border:1px solid var(--toast-accent); padding:8px 14px; border-radius:2px;
+    font-size:12px; opacity:0; pointer-events:none; transition: all .2s ease; z-index:200;
+    color: var(--toast-text);
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast .toast-warn{ color: var(--notif-warn); font-weight:700; margin-right:5px; }
+  .toast .toast-credit{ color: var(--complete); font-weight:700; }
+
+  .kb-indicator{
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%) translateY(20px);
+    background: var(--panel); border:1px solid var(--brass); color: var(--brass);
+    font-family: var(--font-mono); font-size:11px; padding:6px 12px; border-radius:2px;
+    opacity:0; pointer-events:none; transition:all .15s ease; z-index:50;
+  }
+  .kb-indicator.active{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  .footer-sig{ text-align:center; margin-top:18px; font-size:9px; color:#3a3b3f; letter-spacing:1px; }
+
+  @media (max-width: 720px){
+    .main-panel{ min-width:100%; max-width:100%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app-shell">
+
+<header class="hud-panel top-bar">
+  <div class="brand">
+    <img class="brand-mark-icon" src="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" width="20" height="20" alt="" aria-hidden="true">
+    BloxStrike <span class="brand-sub">Account Tracker</span>
+  </div>
+  <div class="top-actions">
+    <div class="top-actions" id="quick-play-row" style="margin:0;"></div>
+    <div class="top-actions-divider"></div>
+    <button type="button" class="btn" id="btn-add-slot"><span class="btn-full">+ Add Slot</span><span class="btn-short">+AS</span></button>
+    <button type="button" class="btn" id="btn-save-all"><span class="btn-full">Save</span><span class="btn-short">S</span></button>
+    <div class="dropdown-wrap">
+      <button type="button" class="btn" id="btn-import-export" title="Import or export your reports and data"><span class="btn-full">Import/Export</span><span class="btn-short">I/E</span></button>
+      <div class="dropdown-menu" id="import-export-menu">
+        <button type="button" class="dropdown-item" id="btn-export">Export Report <span class="di-hint">text</span></button>
+        <button type="button" class="dropdown-item" id="btn-import-report">Import Report <span class="di-hint">text</span></button>
+        <div class="dropdown-divider"></div>
+        <button type="button" class="dropdown-item" id="btn-export-data">Export Data <span class="di-hint">file</span></button>
+        <button type="button" class="dropdown-item" id="btn-import-data">Import Data <span class="di-hint">file</span></button>
+      </div>
+    </div>
+    <input type="file" id="import-file-input" accept="application/json,.json" style="display:none">
+    <button type="button" class="icon-btn" id="btn-undo" title="Undo (Shift+,)" aria-label="Undo" disabled>↶</button>
+    <button type="button" class="icon-btn" id="btn-redo" title="Redo (Shift+.)" aria-label="Redo" disabled>↷</button>
+    <button type="button" class="icon-btn" id="btn-shortcuts" title="Keyboard shortcuts" aria-label="Shortcuts">⌨</button>
+    <button type="button" class="icon-btn" id="btn-settings" title="Appearance settings" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<div class="layout">
+  <section class="hud-panel main-panel">
+    <div class="table-scroll">
+      <table id="tracker-table">
+        <colgroup>
+          <col style="width:22px"><col style="width:40px"><col style="width:130px"><col style="width:104px">
+          <col style="width:172px"><col style="width:84px"><col style="width:120px">
+          <col style="width:80px"><col style="width:80px"><col style="width:80px"><col style="width:80px">
+          <col style="width:96px">
+        </colgroup>
+        <thead>
+          <tr>
+            <th></th><th class="th-nowrap">Slot #</th><th>Account</th><th>Last Saved</th>
+            <th>Rank</th><th>Credits</th><th>Daily Stars</th>
+            <th>Hourly</th><th>Daily</th><th>Weekly</th><th>Monthly</th>
+            <th>Save</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+
+    <div class="global-footer" id="global-footer">
+      <div class="gf-item"><span class="gf-label">Accounts</span><div class="gf-row"><span class="gf-value" id="foot-accounts">0</span></div></div>
+      <div class="gf-item"><span class="gf-label">Credits</span><div class="gf-row"><span class="gf-value" id="foot-credits">0</span></div></div>
+      <div class="gf-item"><span class="gf-label">Ranks</span><div class="gf-row"><span class="gf-value" id="foot-ranks">0/0</span><span class="gf-pct" id="foot-ranks-pct">0%</span></div></div>
+      <div class="gf-item"><span class="gf-label">Daily Stars</span><div class="gf-row"><span class="gf-value" id="foot-stars">0/0</span><span class="gf-pct" id="foot-stars-pct">0%</span></div></div>
+      <div class="gf-item"><span class="gf-label">Missions</span><div class="gf-row"><span class="gf-value" id="foot-missions">0/0</span><span class="gf-pct" id="foot-missions-pct">0%</span></div></div>
+      <div class="gf-divider"></div>
+      <div class="gf-item cat-hr"><span class="gf-label">Hourly</span><div class="gf-row"><span class="gf-value" id="foot-cat-hr">0/0</span><span class="gf-pct" id="foot-cat-hr-pct">0%</span></div></div>
+      <div class="gf-item cat-da"><span class="gf-label">Daily</span><div class="gf-row"><span class="gf-value" id="foot-cat-da">0/0</span><span class="gf-pct" id="foot-cat-da-pct">0%</span></div></div>
+      <div class="gf-item cat-wk"><span class="gf-label">Weekly</span><div class="gf-row"><span class="gf-value" id="foot-cat-wk">0/0</span><span class="gf-pct" id="foot-cat-wk-pct">0%</span></div></div>
+      <div class="gf-item cat-mo"><span class="gf-label">Monthly</span><div class="gf-row"><span class="gf-value" id="foot-cat-mo">0/0</span><span class="gf-pct" id="foot-cat-mo-pct">0%</span></div></div>
+    </div>
+  </section>
+</div>
+
+<div class="mc-note-wrap">
+  <div class="panel-head">Mission Tracker</div>
+  <div class="mc-global-note">Note: the credit values shown are just defaults — each account can have different amounts per mission. Always double check the actual credit reward on each mission before relying on it.</div>
+</div>
+<div id="mission-tracker-container" class="mission-tracker-container"></div>
+
+<div class="footer-sig">made by @svhxll with Claude</div>
+
+</div>
+
+<div class="overlay" id="settings-overlay"></div>
+<aside class="settings-drawer" id="settings-drawer">
+  <div class="drawer-head">
+    <h3>Appearance</h3>
+    <span class="close-btn" id="btn-close-settings" title="Close" aria-label="Close settings">✕</span>
+  </div>
+
+  <div class="setting-group"><label>Background</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-bg" data-key="bg" data-css="--bg" style="background:#0A0B0D" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Panel</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-panel" data-key="panel" data-css="--panel" style="background:#131417" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Text</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-text" data-key="text" data-css="--text" style="background:#E8E6E1" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Grey / Muted Text</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-muted" data-key="muted" data-css="--muted" style="background:#8B8D93" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Accent (corners / dividers)</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-brass" data-key="brass" data-css="--brass" style="background:#C9A227" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Complete (Green)</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-complete" data-key="complete" data-css="--complete" style="background:#2F9E5B" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Incomplete (Red)</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-incomplete" data-key="incomplete" data-css="--incomplete" style="background:#B03A3A" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Progress Bar Start</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-progress-start" data-key="progressStart" data-css="--progress-start" style="background:#2F9E5B" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Progress Bar End</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-progress-end" data-key="progressEnd" data-css="--progress-end" style="background:#C9A227" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+
+  <h4>Notifications</h4>
+  <div class="setting-group"><label>Notification Accent</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-toast-accent" data-key="toastAccent" data-css="--toast-accent" style="background:#FFFFFF" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Notification Text</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-toast-text" data-key="toastText" data-css="--toast-text" style="background:#FFFFFF" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Notification Warning ⚠</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-notif-warn" data-key="notifWarn" data-css="--notif-warn" style="background:#E14C4C" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+
+  <h4>Category Colors</h4>
+  <div class="setting-group"><label>Hourly</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-cat-hr" data-key="catHr" data-css="--cat-hr" style="background:#4A7FA6" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Daily</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-cat-da" data-key="catDa" data-css="--cat-da" style="background:#3A8F6D" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Weekly</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-cat-wk" data-key="catWk" data-css="--cat-wk" style="background:#7B5EA7" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+  <div class="setting-group"><label>Monthly</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-cat-mo" data-key="catMo" data-css="--cat-mo" style="background:#C9A227" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
+
+  <h4>Per-Slot Colors</h4>
+  <div id="slot-style-list"></div>
+
+  <hr>
+  <button type="button" class="btn btn-danger" id="btn-restore-style" style="width:100%;">Restore Style Settings</button>
+  <p class="panel-note">Only resets appearance. Your saved progress is never touched.</p>
+</aside>
+
+<div class="overlay" id="shortcuts-overlay"></div>
+<section class="hud-panel shortcuts-modal" id="shortcuts-modal">
+  <div class="drawer-head">
+    <h3>Shortcuts</h3>
+    <span class="close-btn" id="btn-close-shortcuts" title="Close" aria-label="Close shortcuts">✕</span>
+  </div>
+  <table class="shortcuts-table">
+    <thead><tr><th>Key / Action</th><th>What it does</th></tr></thead>
+    <tbody>
+      <tr><td><span class="kbd">S</span></td><td>Save every unsaved slot at once.</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">1-4 or h/d/w/m</span> <span class="kbd">1-4</span></td><td>Toggle a mission — slot → category → mission number. Category can be typed as a digit (1-4) or a letter (h/d/w/m = hourly/daily/weekly/monthly) — both work. Skip the slot digit if there's only one slot. Hover a mission's square to see its code (e.g. 1d1).</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">1-4 or h/d/w/m</span> <span class="kbd">R</span></td><td>Reset a whole mission category — slot → category → R. Skip the slot digit if there's only one slot.</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">R</span></td><td>Reset every mission in that slot at once — slot → R (skip the category). With only one slot, plain <span class="kbd">R</span> does this.</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">S</span></td><td>Save just one slot — slot → S. (With only one slot, plain <span class="kbd">S</span> already does this.)</td></tr>
+      <tr><td><span class="kbd">Shift</span> <span class="kbd">,</span></td><td>Undo the last action.</td></tr>
+      <tr><td><span class="kbd">Shift</span> <span class="kbd">.</span></td><td>Redo the last undone action.</td></tr>
+      <tr><td><span class="kbd">Esc</span></td><td>Cancel an in-progress keyboard sequence, or close this panel.</td></tr>
+      <tr><td>Scroll over any number field</td><td>±1 per notch, hold <span class="kbd">Shift</span> for ±5, hold <span class="kbd">Ctrl</span> for ±10.</td></tr>
+      <tr><td>Scroll over the mission timer</td><td>Edits whichever segment your cursor is over — days, hours, minutes, or seconds.</td></tr>
+      <tr><td><span class="kbd">⋮⋮</span> handle</td><td>Drag a row to reorder slots.</td></tr>
+      <tr><td><span class="kbd">↺</span> reset</td><td>Clears that stat/category back to zero.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="overlay" id="import-report-overlay"></div>
+<section class="hud-panel import-report-modal" id="import-report-modal">
+  <div class="drawer-head">
+    <h3>Import Report</h3>
+    <span class="close-btn" id="btn-close-import-report" title="Close" aria-label="Close import report">✕</span>
+  </div>
+  <p class="panel-note" style="margin:0 0 8px; font-size:11px; color: var(--muted);">Paste a report previously made with Export Report below, then click Import.</p>
+  <textarea id="import-report-textarea" placeholder="Paste report text here..." spellcheck="false"></textarea>
+  <div class="import-report-actions">
+    <button type="button" class="btn" id="btn-cancel-import-report">Cancel</button>
+    <button type="button" class="btn" id="btn-confirm-import-report">Import</button>
+  </div>
+</section>
+
+<!-- Custom color picker popover (single shared instance) -->
+<div class="color-popover" id="color-popover">
+  <div class="cp-sv" id="cp-sv">
+    <div class="cp-sv-white"></div>
+    <div class="cp-sv-black"></div>
+    <div class="cp-sv-cursor" id="cp-sv-cursor"></div>
+  </div>
+  <div class="cp-hue" id="cp-hue">
+    <div class="cp-hue-cursor" id="cp-hue-cursor"></div>
+  </div>
+  <div class="cp-hex-row">
+    <span>#</span><input type="text" id="cp-hex-input" maxlength="6" spellcheck="false">
+  </div>
+  <div class="cp-presets" id="cp-presets"></div>
+</div>
+
+<div class="unsaved-banner hidden" id="unsaved-banner"><span class="notif-warn-icon">⚠</span> You have unsaved slots. Progress on a row is not written to storage until you hit its SAVE button.</div>
+<div class="toast" id="toast" aria-live="polite"></div>
+<div class="kb-indicator" id="kb-indicator" aria-live="polite"></div>
+
+<script>
+  const CATEGORIES = ['HR','DA','WK','MO'];
+  const GAMES = [
+    { label:'Casual',         abbr:'C',  placeId:'114234929420007' },
+    { label:'Deathmatch',     abbr:'DM', placeId:'135434213652028' },
+    { label:'Trading',        abbr:'T',  placeId:'101836176558619' },
+    { label:'Unranked Comp',  abbr:'UC', placeId:'108194354348181' }
+  ];
+
+  const CAT_NAMES = { HR:'Hourly', DA:'Daily', WK:'Weekly', MO:'Monthly' };
+
+  // Rank tiers by level (1-40, minimum is Rank 1). Used to build labels like
+  // "Private Rank 6" for the tooltip and the small name shown under the level number.
+  const RANK_TIERS = [
+    { min:1,  max:5,  name:'Recruit' },
+    { min:6,  max:10, name:'Private' },
+    { min:11, max:15, name:'Corporal' },
+    { min:16, max:20, name:'Sergeant' },
+    { min:21, max:25, name:'Master Sergeant' },
+    { min:26, max:30, name:'Lieutenant' },
+    { min:31, max:35, name:'Captain' },
+    { min:36, max:40, name:'Global Elite' }
+  ];
+
+  function rankNameForLevel(level){
+    level = Math.max(1, Math.min(40, parseInt(level, 10) || 1));
+    const tier = RANK_TIERS.find(function(t){ return level >= t.min && level <= t.max; });
+    return tier ? tier.name : '';
+  }
+
+  function rankLabelForLevel(level){
+    level = Math.max(1, Math.min(40, parseInt(level, 10) || 1));
+    const name = rankNameForLevel(level);
+    return (name ? name + ' ' : '') + 'Rank ' + level;
+  }
+  const STAR_REWARDS = [13,26,39,65,77,91,130];
+
+  // Cumulative credits for having n daily stars filled: 1 star = 13, 2 stars =
+  // 13+26, 3 stars = 13+26+39, etc. — each star's own reward stacks with the ones before it.
+  function starCumulativeReward(n){
+    n = Math.max(0, Math.min(STAR_REWARDS.length, n));
+    let sum = 0;
+    for(let i = 0; i < n; i++) sum += STAR_REWARDS[i];
+    return sum;
+  }
+  const MISSION_DEFAULTS = {
+    HR: [
+      { reward:5,  name:'Deal 1000 Damage', target:1000 },
+      { reward:5,  name:'Get 4 Headshots', target:4 },
+      { reward:5,  name:'Get 8 Kills', target:8 },
+      { reward:5,  name:'Plant Or Defuse The Bomb 1 Time In Bomb Defusal', target:1 }
+    ],
+    DA: [
+      { reward:20, name:'Get 15 Headshots In Bomb Defusal Or Hostage Rescue', target:15 },
+      { reward:20, name:'Get 4 Multi-Kills In Deathmatch', target:4 },
+      { reward:20, name:'Get 50 Kills In Bomb Defusal', target:50 },
+      { reward:20, name:'Get 80 Kills In Deathmatch', target:80 }
+    ],
+    WK: [
+      { reward:67, name:'Get 12 Multi-Kills In Deathmatch', target:12 },
+      { reward:67, name:'Get 125 Rifle Kills', target:125 },
+      { reward:67, name:'Get 75 Kills In Bomb Defusal', target:75 },
+      { reward:67, name:'Win 100 Rounds', target:100 }
+    ],
+    MO: [
+      { reward:200, name:'Deal 130000 Damage', target:130000 },
+      { reward:200, name:'Get 250 Assists', target:250 },
+      { reward:200, name:'Plant Or Defuse The Bomb 150 Times In Bomb Defusal', target:150 },
+      { reward:200, name:'Win 400 Rounds', target:400 }
+    ]
+  };
+
+  // Master list of every unique mission name spotted so far, grouped by
+  // category, used to power the mission-name autocomplete. Keep adding to
+  // these as new missions turn up — wording is preserved exactly as reported,
+  // only capitalization is normalized.
+  const MISSION_NAME_LIBRARY = {
+    HR: [
+      'Deal 1000 Damage',
+      'Get 2 Multikills',
+      'Get 3 Assists',
+      'Get 8 Kills',
+      'Get 4 Headshots',
+      'Plant or Defuse the Bomb 1 Time in Bomb Defusal',
+      'Earn 3 MVPs',
+      'Win 3 Rounds'
+    ],
+    DA: [
+      'Deal 6000 Damage in Bomb Defusal or Hostage Rescue',
+      'Earn 12 MVPs in Bomb Defusal or Hostage Rescue',
+      'Get 4 Multi-Kills in Deathmatch',
+      'Plant or Defuse the Bomb 12 in Bomb Defusal',
+      'Get 15 Headshots in Bomb Defusal or Hostage Rescue',
+      'Get 50 Kills in Bomb Defusal',
+      'Get 80 Kills in Deathmatch',
+      'Get 18 Pistol Kills',
+      'Win 2 Deathmatch Matches',
+      'Deal 4000 Damage in Deathmatch',
+      'Finish Top 3 in Deathmatch 3 Times'
+    ],
+    WK: [
+      'Get 75 MVPs',
+      'Get 12 Multi-Kills in Deathmatch',
+      'Get 40 Pistol Kills',
+      'Get 70 Assists',
+      'Get 125 Rifle Kills',
+      'Get 75 Kills in Bomb Defusal',
+      'Win 100 Rounds',
+      'Deal 35000 Damage',
+      'Get 60 Headshots',
+      'Finish Top 3 in Deathmatch 12 Times',
+      'Win 25 Rounds in Bomb Defusal'
+    ],
+    MO: [
+      'Deal 4000 Utility Damage',
+      'Finish Top 3 in Deathmatch 40 Times',
+      'Get 250 Assists',
+      'Plant or Defuse the Bomb 150 Times in Bomb Defusal',
+      'Deal 130000 Damage',
+      'Win 400 Rounds',
+      'Get 150 Pistol Kills',
+      'Get 500 Rifle Kills',
+      'Earn 250 MVPs',
+      'Get 1200 Kills',
+      'Get 220 Headshots'
+    ]
+  };
+
+  const MISSION_STORAGE_KEY = 'bloxstrike_missions_v1';
+  let missionState = {};
+  const STORAGE_KEY = 'bloxstrike_tracker_v1';
+  const STYLE_KEY = 'bloxstrike_style_v1';
+
+  let appState = { slots: [] };
+  let slotCounter = 0;
+  let draggedRow = null;
+
+  function defaultStyle(){
+    return {
+      bg:'#0A0B0D', panel:'#131417', text:'#E8E6E1', muted:'#8B8D93', brass:'#C9A227',
+      complete:'#2F9E5B', incomplete:'#B03A3A', progressStart:'#2F9E5B', progressEnd:'#C9A227',
+      catHr:'#4A7FA6', catDa:'#3A8F6D', catWk:'#7B5EA7', catMo:'#C9A227',
+      toastAccent:'#FFFFFF', toastText:'#FFFFFF', notifWarn:'#E14C4C',
+      slots:{}
+    };
+  }
+  let styleData = defaultStyle();
+
+  /* ---------- color math ---------- */
+  function hexToRgb(hex){
+    hex = String(hex).replace('#','');
+    if(hex.length===3) hex = hex.split('').map(function(c){ return c+c; }).join('');
+    const num = parseInt(hex,16) || 0;
+    return { r:(num>>16)&255, g:(num>>8)&255, b:num&255 };
+  }
+  function rgbToHex(r,g,b){
+    return '#' + [r,g,b].map(function(v){ return Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0'); }).join('').toUpperCase();
+  }
+  function hexToRgba(hex, alpha){
+    const c = hexToRgb(hex);
+    return 'rgba(' + c.r + ',' + c.g + ',' + c.b + ',' + alpha + ')';
+  }
+  function rgbToHsv(r,g,b){
+    r/=255; g/=255; b/=255;
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    let h=0; const v=max, d=max-min;
+    const s = max===0 ? 0 : d/max;
+    if(max!==min){
+      switch(max){
+        case r: h=(g-b)/d + (g<b?6:0); break;
+        case g: h=(b-r)/d + 2; break;
+        case b: h=(r-g)/d + 4; break;
+      }
+      h/=6;
+    }
+    return { h:h*360, s:s, v:v };
+  }
+  function hsvToRgb(h,s,v){
+    h = ((h%360)+360)%360; h/=360;
+    let r,g,b;
+    const i = Math.floor(h*6);
+    const f = h*6-i;
+    const p = v*(1-s);
+    const q = v*(1-f*s);
+    const t = v*(1-(1-f)*s);
+    switch(i%6){
+      case 0: r=v;g=t;b=p; break;
+      case 1: r=q;g=v;b=p; break;
+      case 2: r=p;g=v;b=t; break;
+      case 3: r=p;g=q;b=v; break;
+      case 4: r=t;g=p;b=v; break;
+      default: r=v;g=p;b=q; break;
+    }
+    return { r:r*255, g:g*255, b:b*255 };
+  }
+  function hexToHsv(hex){ const c = hexToRgb(hex); return rgbToHsv(c.r,c.g,c.b); }
+  function hsvToHex(h,s,v){ const c = hsvToRgb(h,s,v); return rgbToHex(c.r,c.g,c.b); }
+
+  /* ---------- utils ---------- */
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+  }
+  function getFormattedTime(){
+    return new Date().toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.innerHTML = '';
+    const creditMatch = /^(\+\d+ credits)([\s\S]*)$/.exec(msg);
+    if(msg.charAt(0) === '⚠'){
+      const warn = document.createElement('span');
+      warn.className = 'toast-warn';
+      warn.textContent = '⚠';
+      t.appendChild(warn);
+      t.appendChild(document.createTextNode(msg.slice(1).replace(/^\s+/, '')));
+    } else if(creditMatch){
+      const credit = document.createElement('span');
+      credit.className = 'toast-credit';
+      credit.textContent = creditMatch[1];
+      t.appendChild(credit);
+      t.appendChild(document.createTextNode(creditMatch[2]));
+    } else {
+      t.textContent = msg;
+    }
+    t.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ t.classList.remove('show'); }, 2400);
+  }
+  function sanitizeNumeric(el, opts){
+    opts = opts || {};
+    let v = el.value.replace(/[^0-9]/g,'');
+    if(v.length>1) v = v.replace(/^0+(?=\d)/,'');
+    if(v!==''){
+      let num = parseInt(v,10);
+      if(opts.max!=null && num>opts.max) num = opts.max;
+      if(opts.min!=null && num<opts.min) num = opts.min;
+      v = String(num);
+    }
+    el.value = v;
+  }
+
+  /* ---------- persistence ---------- */
+  function persistAppState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(appState)); }
+  function loadAppState(){
+    try{
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if(raw) appState = JSON.parse(raw);
+    }catch(e){ appState = { slots: [] }; }
+    if(!appState || !Array.isArray(appState.slots)) appState = { slots: [] };
+  }
+
+  function persistStyle(){ localStorage.setItem(STYLE_KEY, JSON.stringify(styleData)); }
+  function loadStyle(){
+    try{
+      const raw = localStorage.getItem(STYLE_KEY);
+      if(raw) styleData = Object.assign(defaultStyle(), JSON.parse(raw));
+    }catch(e){}
+    applyGlobalStyle();
+  }
+
+  /* ---------- style application ---------- */
+  function applyGlobalStyle(){
+    const root = document.documentElement.style;
+    root.setProperty('--bg', styleData.bg);
+    root.setProperty('--panel', styleData.panel);
+    root.setProperty('--text', styleData.text);
+    root.setProperty('--muted', styleData.muted);
+    root.setProperty('--brass', styleData.brass);
+    root.setProperty('--brass-dim', hexToRgba(styleData.brass, 0.35));
+    root.setProperty('--complete', styleData.complete);
+    root.setProperty('--incomplete', styleData.incomplete);
+    root.setProperty('--progress-start', styleData.progressStart);
+    root.setProperty('--progress-end', styleData.progressEnd);
+    root.setProperty('--cat-hr', styleData.catHr);
+    root.setProperty('--cat-da', styleData.catDa);
+    root.setProperty('--cat-wk', styleData.catWk);
+    root.setProperty('--cat-mo', styleData.catMo);
+    root.setProperty('--toast-accent', styleData.toastAccent);
+    root.setProperty('--toast-text', styleData.toastText);
+    root.setProperty('--notif-warn', styleData.notifWarn);
+    syncStyleInputs();
+  }
+  function syncStyleInputs(){
+    const map = { bg:'cp-bg', panel:'cp-panel', text:'cp-text', muted:'cp-muted', brass:'cp-brass', complete:'cp-complete', incomplete:'cp-incomplete', progressStart:'cp-progress-start', progressEnd:'cp-progress-end',
+                  catHr:'cp-cat-hr', catDa:'cp-cat-da', catWk:'cp-cat-wk', catMo:'cp-cat-mo',
+                  toastAccent:'cp-toast-accent', toastText:'cp-toast-text', notifWarn:'cp-notif-warn' };
+    Object.keys(map).forEach(function(k){
+      const el = document.getElementById(map[k]);
+      if(el) el.style.background = styleData[k];
+    });
+  }
+  function updateGlobalColor(key, cssVar, value){
+    styleData[key] = value;
+    document.documentElement.style.setProperty(cssVar, value);
+    if(key === 'brass'){
+      document.documentElement.style.setProperty('--brass-dim', hexToRgba(value, 0.35));
+    }
+    persistStyle();
+  }
+  function openGlobalColorPicker(el){
+    const key = el.dataset.key;
+    const cssVar = el.dataset.css;
+    openColorPicker(el, styleData[key], function(hex){
+      el.style.background = hex;
+      updateGlobalColor(key, cssVar, hex);
+    });
+  }
+  function resetGlobalColorFromBtn(resetEl){
+    const swatch = resetEl.previousElementSibling;
+    if(!swatch) return;
+    const key = swatch.dataset.key;
+    const cssVar = swatch.dataset.css;
+    const def = defaultStyle()[key];
+    if(def == null) return;
+    swatch.style.background = def;
+    updateGlobalColor(key, cssVar, def);
+  }
+  function resetSlotColorFromBtn(resetEl){
+    const swatch = resetEl.previousElementSibling;
+    if(!swatch) return;
+    const slotId = swatch.dataset.slot;
+    const type = swatch.dataset.type;
+    if(styleData.slots[slotId]) delete styleData.slots[slotId][type];
+    applySlotStyle(slotId);
+    persistStyle();
+    renderSlotStyleSettings();
+  }
+  function updateSlotColor(slotId, type, value){
+    if(!styleData.slots[slotId]) styleData.slots[slotId] = {};
+    styleData.slots[slotId][type] = value;
+    applySlotStyle(slotId);
+    persistStyle();
+  }
+  function applySlotStyle(slotId){
+    const tr = document.getElementById(slotId);
+    if(!tr) return;
+    const s = styleData.slots[slotId] || {};
+    if(s.bg) tr.style.setProperty('--row-bg', s.bg); else tr.style.removeProperty('--row-bg');
+    if(s.text) tr.style.setProperty('--row-text', s.text); else tr.style.removeProperty('--row-text');
+  }
+  function restoreStyleSettings(){
+    styleData = defaultStyle();
+    applyGlobalStyle();
+    document.querySelectorAll('.slot-row').forEach(function(tr){
+      tr.style.removeProperty('--row-bg');
+      tr.style.removeProperty('--row-text');
+    });
+    persistStyle();
+    renderSlotStyleSettings();
+    showToast('Style settings restored — progress untouched');
+  }
+  function renderSlotStyleSettings(){
+    const container = document.getElementById('slot-style-list');
+    container.innerHTML = '';
+    document.querySelectorAll('#table-body tr').forEach(function(tr, i){
+      const id = tr.id;
+      const s = styleData.slots[id] || {};
+      const name = tr.querySelector('.f-name').value.trim();
+      const bgVal = s.bg || '#17181C';
+      const textVal = s.text || '#E8E6E1';
+      const block = document.createElement('div');
+      block.className = 'slot-style-block';
+      block.innerHTML =
+        '<h5>Slot ' + (i+1) + (name ? ' — ' + escapeHtml(name) : '') + '</h5>' +
+        '<div class="style-row">' +
+          '<label>Row BG<div class="swatch-row"><button type="button" class="color-swatch" style="background:' + bgVal + '" data-slot="' + id + '" data-type="bg"></button><span class="mini-reset" title="Reset to default" onclick="resetSlotColorFromBtn(this)">↺</span></div></label>' +
+          '<label>Row Text<div class="swatch-row"><button type="button" class="color-swatch" style="background:' + textVal + '" data-slot="' + id + '" data-type="text"></button><span class="mini-reset" title="Reset to default" onclick="resetSlotColorFromBtn(this)">↺</span></div></label>' +
+        '</div>';
+      container.appendChild(block);
+    });
+    container.querySelectorAll('.color-swatch').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        const slotId = btn.dataset.slot;
+        const type = btn.dataset.type;
+        const current = (styleData.slots[slotId] && styleData.slots[slotId][type]) || (type==='bg' ? '#17181C' : '#E8E6E1');
+        openColorPicker(btn, current, function(hex){
+          btn.style.background = hex;
+          updateSlotColor(slotId, type, hex);
+        });
+      });
+    });
+  }
+
+  /* ---------- custom color picker ---------- */
+  const PRESET_COLORS = ['#C9A227','#2F9E5B','#B03A3A','#4A7FA6','#3A8F6D','#7B5EA7','#0A0B0D','#131417','#17181C','#E8E6E1'];
+  let cpHue = 45, cpSat = 0.87, cpVal = 0.79;
+  let cpOnChange = null;
+  let cpCurrentAnchor = null;
+
+  function positionCursors(){
+    document.getElementById('cp-sv-cursor').style.left = (cpSat*100) + '%';
+    document.getElementById('cp-sv-cursor').style.top = ((1-cpVal)*100) + '%';
+    document.getElementById('cp-hue-cursor').style.left = (cpHue/360*100) + '%';
+  }
+  function updateSvHue(){
+    document.getElementById('cp-sv').style.background = hsvToHex(cpHue,1,1);
+  }
+  function currentPickerHex(){ return hsvToHex(cpHue, cpSat, cpVal); }
+  function renderPresets(){
+    const wrap = document.getElementById('cp-presets');
+    wrap.innerHTML = '';
+    PRESET_COLORS.forEach(function(c){
+      const sw = document.createElement('div');
+      sw.className = 'cp-preset';
+      sw.style.background = c;
+      sw.title = c;
+      sw.addEventListener('click', function(){ applyPickerHex(c); });
+      wrap.appendChild(sw);
+    });
+  }
+  function applyPickerHex(hex){
+    hex = hex.toUpperCase();
+    const hsv = hexToHsv(hex);
+    cpHue = hsv.h; cpSat = hsv.s; cpVal = hsv.v;
+    updateSvHue(); positionCursors();
+    document.getElementById('cp-hex-input').value = hex.replace('#','');
+    if(cpCurrentAnchor) cpCurrentAnchor.style.background = hex;
+    if(cpOnChange) cpOnChange(hex);
+  }
+  function openColorPicker(anchorEl, initialHex, onChange){
+    cpOnChange = onChange;
+    cpCurrentAnchor = anchorEl;
+    const hsv = hexToHsv(initialHex || '#000000');
+    cpHue = hsv.h; cpSat = hsv.s; cpVal = hsv.v;
+    updateSvHue(); positionCursors();
+    document.getElementById('cp-hex-input').value = (initialHex || '#000000').replace('#','').toUpperCase();
+    renderPresets();
+
+    const pop = document.getElementById('color-popover');
+    pop.classList.add('open');
+    const rect = anchorEl.getBoundingClientRect();
+    const popW = 190, popH = 250;
+    let left = rect.left;
+    let top = rect.bottom + 6;
+    if(left + popW > window.innerWidth - 8) left = window.innerWidth - popW - 8;
+    if(top + popH > window.innerHeight - 8) top = rect.top - popH - 6;
+    pop.style.left = Math.max(8,left) + 'px';
+    pop.style.top = Math.max(8,top) + 'px';
+
+    setTimeout(function(){ document.addEventListener('mousedown', cpOutsideHandler); }, 0);
+  }
+  function cpOutsideHandler(e){
+    const pop = document.getElementById('color-popover');
+    if(!pop.contains(e.target) && e.target !== cpCurrentAnchor){
+      pop.classList.remove('open');
+      document.removeEventListener('mousedown', cpOutsideHandler);
+    }
+  }
+  function setupColorPickerDrag(){
+    let draggingSv = false, draggingHue = false;
+    const sv = document.getElementById('cp-sv');
+    const hue = document.getElementById('cp-hue');
+
+    function moveSv(e){
+      const rect = sv.getBoundingClientRect();
+      let x = (e.clientX-rect.left)/rect.width; x = Math.max(0,Math.min(1,x));
+      let y = (e.clientY-rect.top)/rect.height; y = Math.max(0,Math.min(1,y));
+      cpSat = x; cpVal = 1-y;
+      positionCursors();
+      const hex = currentPickerHex();
+      document.getElementById('cp-hex-input').value = hex.replace('#','');
+      if(cpCurrentAnchor) cpCurrentAnchor.style.background = hex;
+      if(cpOnChange) cpOnChange(hex);
+    }
+    function moveHue(e){
+      const rect = hue.getBoundingClientRect();
+      let x = (e.clientX-rect.left)/rect.width; x = Math.max(0,Math.min(1,x));
+      cpHue = x*360;
+      updateSvHue(); positionCursors();
+      const hex = currentPickerHex();
+      document.getElementById('cp-hex-input').value = hex.replace('#','');
+      if(cpCurrentAnchor) cpCurrentAnchor.style.background = hex;
+      if(cpOnChange) cpOnChange(hex);
+    }
+
+    sv.addEventListener('mousedown', function(e){ draggingSv = true; moveSv(e); e.preventDefault(); });
+    hue.addEventListener('mousedown', function(e){ draggingHue = true; moveHue(e); e.preventDefault(); });
+    document.addEventListener('mousemove', function(e){
+      if(draggingSv) moveSv(e);
+      if(draggingHue) moveHue(e);
+    });
+    document.addEventListener('mouseup', function(){ draggingSv = false; draggingHue = false; });
+
+    document.getElementById('cp-hex-input').addEventListener('input', function(){
+      let v = this.value.replace(/[^0-9a-fA-F]/g,'').slice(0,6);
+      this.value = v;
+      if(v.length === 6) applyPickerHex('#' + v);
+    });
+  }
+
+  /* ---------- rows ---------- */
+  function buildMissionCell(catKey, missionsSlice){
+    const complete = missionsSlice.filter(Boolean).length;
+    const btns = missionsSlice.map(function(val){
+      return '<div class="mission-btn ' + (val ? 'bg-complete' : 'bg-incomplete') + '" onclick="toggleMission(this)"></div>';
+    }).join('');
+    return '<td class="col-mission-cat cat-' + catKey.toLowerCase() + '">' +
+             '<div class="cat-label"><span class="cat-count">' + complete + '/4</span>' +
+               '<span class="mini-reset" title="Reset ' + CAT_NAMES[catKey] + '" onclick="resetCategory(this)">↺</span>' +
+             '</div>' +
+             '<div class="mission-group" data-cat="' + catKey + '">' + btns + '</div>' +
+           '</td>';
+  }
+
+  function renderRow(slot){
+    const tr = document.createElement('tr');
+    tr.id = slot.id;
+    tr.className = 'slot-row';
+    tr.dataset.dirty = 'false';
+    tr.dataset.starsAwarded = String(slot.starsAwarded || 0);
+
+    const missions = (slot.missions && slot.missions.length === 16) ? slot.missions : Array(16).fill(false);
+    const missionCellsHtml = CATEGORIES.map(function(cat, ci){
+      return buildMissionCell(cat, missions.slice(ci*4, ci*4+4));
+    }).join('');
+    const level = Math.max(1, Math.min(40, parseInt(slot.level, 10) || 1));
+
+    const starsHtml = Array.from({length:7}, function(_, i){
+      const active = i < (slot.stars || 0);
+      return '<span class="star-btn ' + (active ? 'star-active' : 'star-inactive') + '" data-idx="' + i + '" onclick="setStar(this)">★</span>';
+    }).join('');
+
+    tr.innerHTML =
+      '<td class="col-drag"><span class="drag-handle" title="Drag to reorder">⋮⋮</span></td>' +
+      '<td class="col-num"><span class="slot-num">1</span></td>' +
+      '<td class="col-name">' +
+        '<input type="text" class="f-name" maxlength="18" placeholder="Username" value="' + escapeHtml(slot.name || '') + '">' +
+      '</td>' +
+      '<td class="col-time"><span class="f-time">' + escapeHtml(slot.time || '—') + '</span></td>' +
+      '<td class="col-level"><div class="rank-row"><span class="f-rank-name">' + rankNameForLevel(level) + ' Rank</span><input type="text" inputmode="numeric" class="f-level" title="' + rankLabelForLevel(level) + ' — Scroll to adjust" value="' + level + '"></div></td>' +
+      '<td class="col-credits"><input type="text" inputmode="numeric" class="f-credits" title="Scroll to adjust" value="' + (slot.credits != null ? slot.credits : 0) + '"></td>' +
+      '<td class="col-stars"><div class="stars-row">' + starsHtml + '<span class="mini-reset" title="Reset Daily Stars" onclick="resetStars(this)">↺</span></div></td>' +
+      missionCellsHtml +
+      '<td class="col-save"><div class="save-wrap"><button type="button" class="save-btn" onclick="commitSlot(this)">Save</button><span class="remove-btn" onclick="removeSlot(\'' + slot.id + '\')" title="Remove slot">✕</span></div></td>';
+
+    document.getElementById('table-body').appendChild(tr);
+    attachRowEvents(tr);
+    applySlotStyle(slot.id);
+    recalcRow(tr);
+  }
+
+  // Shared step logic: plain scroll = ±1, Shift+scroll = ±5, Ctrl/Cmd+scroll = ±10.
+  // preventDefault() is called unconditionally (non-passive listener) so Ctrl+scroll
+  // never falls through to the browser's page-zoom gesture while over a number field.
+  function wheelStep(e){
+    if(e.ctrlKey || e.metaKey) return 10;
+    if(e.shiftKey) return 5;
+    return 1;
+  }
+
+  function attachWheelStep(input, min, max){
+    input.addEventListener('wheel', function(e){
+      e.preventDefault();
+      beginFieldEdit(input);
+      clearTimeout(input._wheelCommitTimer);
+      input._wheelCommitTimer = setTimeout(function(){ commitFieldEdit(input); }, 700);
+      let val = parseInt(input.value, 10); if(isNaN(val)) val = 0;
+      const step = wheelStep(e);
+      val += (e.deltaY < 0 ? step : -step);
+      if(min != null) val = Math.max(min, val);
+      if(max != null) val = Math.min(max, val);
+      input.value = String(val);
+      input.dispatchEvent(new Event('input', { bubbles:true }));
+    }, { passive:false });
+  }
+
+  // Same behavior for numeric fields that live inside mission cards (reward /
+  // current / target). These are delegated from the card container since the
+  // .mc-missions markup gets rebuilt on every tab switch / timer reset.
+  function attachMissionWheelDelegate(missionsEl){
+    missionsEl.addEventListener('wheel', function(e){
+      const target = e.target;
+      const isReward = target.classList && target.classList.contains('mc-m-reward');
+      const isCurrent = target.classList && target.classList.contains('mc-m-current');
+      const isTarget = target.classList && target.classList.contains('mc-m-target');
+      if(!isReward && !isCurrent && !isTarget) return;
+      e.preventDefault();
+      let val = parseInt(target.value, 10); if(isNaN(val)) val = 0;
+      const step = wheelStep(e);
+      val += (e.deltaY < 0 ? step : -step);
+      const min = isTarget ? 1 : 0;
+      val = Math.max(min, val);
+      if(isCurrent){
+        const row = target.closest('.mc-mission-row');
+        const targetInput = row ? row.querySelector('.mc-m-target') : null;
+        const cap = targetInput ? parseInt(targetInput.value, 10) : NaN;
+        if(!isNaN(cap) && cap > 0) val = Math.min(val, cap);
+      }
+      target.value = String(val);
+      target.dispatchEvent(new Event('change', { bubbles:true }));
+    }, { passive:false });
+  }
+
+  function attachRowEvents(tr){
+    const levelInput = tr.querySelector('.f-level');
+    const creditsInput = tr.querySelector('.f-credits');
+    const nameInput = tr.querySelector('.f-name');
+
+    levelInput.addEventListener('focus', function(){ beginFieldEdit(levelInput); });
+    levelInput.addEventListener('input', function(){
+      sanitizeNumeric(levelInput, {min:1, max:40});
+      updateRankLabel(tr);
+      markDirty(tr); recalcRow(tr); recalcGlobalFooter();
+    });
+    levelInput.addEventListener('blur', function(){
+      if(levelInput.value === '') levelInput.value = '1';
+      updateRankLabel(tr);
+      recalcRow(tr); recalcGlobalFooter();
+      commitFieldEdit(levelInput);
+    });
+
+    creditsInput.addEventListener('focus', function(){ beginFieldEdit(creditsInput); });
+    creditsInput.addEventListener('input', function(){
+      sanitizeNumeric(creditsInput, {min:0});
+      markDirty(tr); recalcGlobalFooter();
+    });
+    creditsInput.addEventListener('blur', function(){
+      if(creditsInput.value === '') creditsInput.value = '0';
+      recalcGlobalFooter();
+      commitFieldEdit(creditsInput);
+    });
+
+    attachWheelStep(levelInput, 1, 40);
+    attachWheelStep(creditsInput, 0, null);
+
+    nameInput.addEventListener('focus', function(){ beginFieldEdit(nameInput); });
+    nameInput.addEventListener('input', function(){ markDirty(tr); renderPlayTable(); const num = tr.querySelector('.slot-num').textContent; updateMissionCardName(tr.id, nameInput.value.trim() || ('Slot ' + num)); });
+    nameInput.addEventListener('blur', function(){ commitFieldEdit(nameInput); });
+
+    attachDragEvents(tr);
+  }
+
+  function addSlot(existing){
+    let slot;
+    if(existing){
+      slot = existing;
+      const m = /slot-(\d+)/.exec(slot.id || '');
+      if(m) slotCounter = Math.max(slotCounter, parseInt(m[1],10));
+    } else {
+      slotCounter++;
+      slot = { id:'slot-' + slotCounter, name:'', level:1, credits:0, stars:0, starsAwarded:0, missions:Array(16).fill(false), time:'—' };
+      appState.slots.push(slot);
+      persistAppState();
+    }
+    renderRow(slot);
+    renumber();
+    recalcGlobalFooter();
+    renderSlotStyleSettings();
+  }
+
+  function removeSlot(id){
+    pushUndoSnapshot();
+    const tr = document.getElementById(id);
+    if(tr) tr.remove();
+    appState.slots = appState.slots.filter(function(s){ return s.id !== id; });
+    if(styleData.slots[id]) delete styleData.slots[id];
+    if(missionState[id]){ delete missionState[id]; persistMissionState(); }
+    persistAppState();
+    persistStyle();
+    renumber();
+    recalcGlobalFooter();
+    updateUnsavedBanner();
+    renderSlotStyleSettings();
+  }
+
+  const CAT_CODE_LETTER = { HR:'h', DA:'d', WK:'w', MO:'m' };
+
+  function updateMissionBtnTitles(tr, slotNum){
+    tr.querySelectorAll('.mission-group').forEach(function(group){
+      const letter = CAT_CODE_LETTER[group.dataset.cat] || '';
+      group.querySelectorAll('.mission-btn').forEach(function(btn, i){
+        btn.title = slotNum + letter + (i + 1);
+      });
+    });
+  }
+
+  function renumber(){
+    document.querySelectorAll('#table-body tr').forEach(function(tr, i){
+      tr.querySelector('.slot-num').textContent = i + 1;
+      updateMissionBtnTitles(tr, i + 1);
+    });
+    renderPlayTable();
+    renderMissionTrackers();
+    reconcileMissionLinks();
+  }
+
+  function playUrl(placeId){
+    return 'https://www.roblox.com/games/start?placeId=' + placeId;
+  }
+
+  function renderPlayTable(){
+    const row = document.getElementById('quick-play-row');
+    if(!row) return;
+    row.innerHTML = GAMES.map(function(g){
+      return '<a class="play-btn" href="' + playUrl(g.placeId) + '" target="_blank" rel="noopener">▶ <span class="btn-full">' + escapeHtml(g.label) + '</span><span class="btn-short">' + escapeHtml(g.abbr) + '</span></a>';
+    }).join('');
+  }
+
+  /* ---------- Mission reset countdown timers ---------- */
+  function formatCountdown(ms){
+    if(ms < 0) ms = 0;
+    const totalSec = Math.floor(ms/1000);
+    const days = Math.floor(totalSec/86400);
+    const hh = Math.floor((totalSec%86400)/3600);
+    const mm = Math.floor((totalSec%3600)/60);
+    const ss = totalSec%60;
+    const pad = function(n){ return String(n).padStart(2,'0'); };
+    return days + ':' + pad(hh) + ':' + pad(mm) + ':' + pad(ss);
+  }
+
+  /* ---------- Mission Tracker (per-slot mission tables) ---------- */
+  // Each category's timer resets to a fixed duration from the moment it's
+  // reset — Hourly = 1 hour, Daily = 24 hours, Weekly = 7 days, Monthly = 30
+  // days — rather than snapping to the next calendar hour/day/week/month.
+  const CAT_DURATION_SEC = { HR: 3600, DA: 86400, WK: 7*86400, MO: 30*86400 };
+
+  function freshCatData(cat){
+    return {
+      remainingSec: CAT_DURATION_SEC[cat],
+      lastTick: Date.now(),
+      missions: MISSION_DEFAULTS[cat].map(function(m){
+        return { reward:m.reward, name:m.name, current:0, target:m.target, awarded:false };
+      })
+    };
+  }
+
+  function freshSlotMissionData(){
+    return {
+      activeCat:'HR',
+      stars:0,
+      cats:{ HR:freshCatData('HR'), DA:freshCatData('DA'), WK:freshCatData('WK'), MO:freshCatData('MO') }
+    };
+  }
+
+  function persistMissionState(){ localStorage.setItem(MISSION_STORAGE_KEY, JSON.stringify(missionState)); }
+
+  function loadMissionState(){
+    try{
+      const raw = localStorage.getItem(MISSION_STORAGE_KEY);
+      missionState = raw ? JSON.parse(raw) : {};
+    } catch(e){ missionState = {}; }
+  }
+
+  function getMissionData(slotId){
+    if(!missionState[slotId]){
+      missionState[slotId] = freshSlotMissionData();
+      persistMissionState();
+    }
+    const d = missionState[slotId];
+    if(!d.cats) d.cats = {};
+    ['HR','DA','WK','MO'].forEach(function(cat){
+      if(!d.cats[cat]) d.cats[cat] = freshCatData(cat);
+      d.cats[cat].missions.forEach(function(m){
+        if(typeof m.awarded !== 'boolean') m.awarded = (m.target > 0 && m.current >= m.target);
+      });
+    });
+    if(!d.activeCat) d.activeCat = 'HR';
+    if(typeof d.stars !== 'number') d.stars = 0;
+    return d;
+  }
+
+  function liveRemainingSec(catData){
+    const elapsed = Math.floor((Date.now() - catData.lastTick) / 1000);
+    return Math.max(0, catData.remainingSec - elapsed);
+  }
+
+  function parseDHMS(str){
+    const parts = String(str).trim().split(':').map(function(p){ return parseInt(p,10); }).filter(function(n){ return !isNaN(n); });
+    if(parts.length === 0) return null;
+    let d=0,h=0,m=0,s=0;
+    if(parts.length === 1){ s = parts[0]; }
+    else if(parts.length === 2){ m = parts[0]; s = parts[1]; }
+    else if(parts.length === 3){ h = parts[0]; m = parts[1]; s = parts[2]; }
+    else { d = parts[0]; h = parts[1]; m = parts[2]; s = parts[3]; }
+    return d*86400 + h*3600 + m*60 + s;
+  }
+
+  // Figures out which character of the rendered "D:HH:MM:SS" text sits under
+  // a given pointer x-position, using an offscreen canvas so it accounts for
+  // the input's actual font metrics and its centered text alignment.
+  function timerCharIndexAtX(input, clientX){
+    const text = input.value || '';
+    if(!text) return 0;
+    const rect = input.getBoundingClientRect();
+    const style = getComputedStyle(input);
+    const canvas = timerCharIndexAtX._canvas || (timerCharIndexAtX._canvas = document.createElement('canvas'));
+    const ctx = canvas.getContext('2d');
+    ctx.font = style.fontStyle + ' ' + style.fontWeight + ' ' + style.fontSize + '/' + style.lineHeight + ' ' + style.fontFamily;
+    const textWidth = ctx.measureText(text).width;
+    const paddingLeft = parseFloat(style.paddingLeft) || 0;
+    const paddingRight = parseFloat(style.paddingRight) || 0;
+    const borderLeft = parseFloat(style.borderLeftWidth) || 0;
+    const borderRight = parseFloat(style.borderRightWidth) || 0;
+    const contentLeft = rect.left + borderLeft + paddingLeft;
+    const contentWidth = rect.width - borderLeft - borderRight - paddingLeft - paddingRight;
+    const textStart = contentLeft + Math.max(0, (contentWidth - textWidth) / 2);
+    const x = clientX - textStart;
+    if(x <= 0) return 0;
+    for(let i = 1; i <= text.length; i++){
+      if(ctx.measureText(text.slice(0, i)).width >= x) return i - 1;
+    }
+    return text.length - 1;
+  }
+
+  // Maps a pointer x-position to which colon-separated segment it's over:
+  // 0 = days, 1 = hours, 2 = minutes, 3 = seconds.
+  function timerSegmentAtX(input, clientX){
+    const text = input.value || '';
+    const charIdx = timerCharIndexAtX(input, clientX);
+    let seg = 0;
+    for(let i = 0; i < charIdx && i < text.length; i++){
+      if(text[i] === ':') seg++;
+    }
+    return Math.min(seg, 3);
+  }
+
+  function missionPct(m){
+    if(!m.target || m.target <= 0) return 0;
+    return Math.max(0, Math.min(100, (m.current / m.target) * 100));
+  }
+
+  // Mission names almost always embed their target count, e.g. "Get 4
+  // Multi-Kills In Deathmatch" -> 4, "Deal 1000 Damage" -> 1000. Pull the
+  // first number out so renaming a mission (typing or autocomplete) keeps
+  // the target in sync automatically.
+  function parseTargetFromMissionName(name){
+    const match = /\d+/.exec(name || '');
+    return match ? parseInt(match[0], 10) : null;
+  }
+
+  /* ---------- Slot table <-> Mission tracker card linking ---------- */
+  // Both views represent the same 16 missions per slot (4 categories x 4 missions).
+  // The slot table only knows complete/incomplete; the mission-tracker card also
+  // tracks numeric current/target progress. This keeps them in sync in both
+  // directions and pays out (or claws back) the mission's credit reward exactly
+  // once per completion — never a mission-short amount (e.g. never 999/8 instead
+  // of 1000/8, always the exact target).
+  function getRowMissionBtn(tr, cat, idx){
+    const group = tr.querySelector('.mission-group[data-cat="' + cat + '"]');
+    if(!group) return null;
+    return group.querySelectorAll('.mission-btn')[idx] || null;
+  }
+
+  function getMissionCard(slotId){
+    return document.querySelector('.mission-card[data-slot="' + slotId + '"]');
+  }
+
+  function updateMissionCardRowDisplay(card, cat, idx){
+    if(!card) return;
+    const data = getMissionData(card.dataset.slot);
+    if(data.activeCat !== cat) return; // not the visible tab right now — state is still saved, just not redrawn
+    const row = card.querySelectorAll('.mc-mission-row')[idx];
+    if(!row) return;
+    const m = data.cats[cat].missions[idx];
+    if(!m) return;
+    const pct = missionPct(m);
+    const complete = m.target > 0 && m.current >= m.target;
+    row.classList.toggle('mc-complete', complete);
+    const fill = row.querySelector('.mc-m-fill');
+    if(fill) fill.style.width = pct + '%';
+    const curInput = row.querySelector('.mc-m-current');
+    if(curInput && document.activeElement !== curInput) curInput.value = m.current;
+    const tgtInput = row.querySelector('.mc-m-target');
+    if(tgtInput && document.activeElement !== tgtInput) tgtInput.value = m.target;
+  }
+
+  function applyCreditDelta(tr, amount){
+    if(!amount) return;
+    const input = tr.querySelector('.f-credits');
+    if(!input) return;
+    let v = parseInt(input.value, 10) || 0;
+    v = Math.max(0, v + amount);
+    input.value = v;
+    markDirty(tr);
+  }
+
+  function shortMissionLabel(name){
+    name = name || 'Mission';
+    return name.length > 34 ? name.slice(0, 31) + '…' : name;
+  }
+
+  // source: 'mainTable' (a checkbox in the slot table was toggled) or 'card' (the
+  // mission-tracker card's current/target/timer-reset changed the progress).
+  // opts.silent === true means just reconcile state/visuals with no credit payout
+  // or toast — used once at load time to line up pre-existing data.
+  function applyMissionCompletionEffects(slotId, cat, idx, complete, source, opts){
+    opts = opts || {};
+    const tr = document.getElementById(slotId);
+    if(!tr) return;
+    const data = getMissionData(slotId);
+    const catData = data.cats[cat];
+    const m = catData && catData.missions[idx];
+    if(!m) return;
+
+    const wasAwarded = !!m.awarded;
+    m.awarded = complete;
+
+    if(source === 'mainTable'){
+      // slot table has no numeric progress of its own — snap to the exact target,
+      // never one short (this is the "999/1000, 7/8, 3/4" bug to avoid).
+      m.current = complete ? m.target : 0;
+      updateMissionCardRowDisplay(getMissionCard(slotId), cat, idx);
+    } else {
+      // came from the card, which already set m.current itself — just reflect
+      // the resulting complete/incomplete state onto the slot table checkbox.
+      const btn = getRowMissionBtn(tr, cat, idx);
+      if(btn){
+        btn.classList.toggle('bg-complete', complete);
+        btn.classList.toggle('bg-incomplete', !complete);
+      }
+      updateMissionCardRowDisplay(getMissionCard(slotId), cat, idx);
+    }
+
+    if(!opts.silent){
+      if(complete && !wasAwarded){
+        applyCreditDelta(tr, m.reward);
+        showToast('+' + m.reward + ' credits — "' + shortMissionLabel(m.name) + '" complete');
+      } else if(!complete && wasAwarded){
+        applyCreditDelta(tr, -m.reward);
+      }
+    }
+
+    persistMissionState();
+    recalcRow(tr);
+    recalcGlobalFooter();
+  }
+
+  // One-time pass at load: the slot-table checkboxes and the mission-tracker
+  // card's numeric progress were previously independent, so bring them into
+  // agreement without paying out (or clawing back) any credits.
+  function reconcileMissionLinks(){
+    document.querySelectorAll('#table-body tr').forEach(function(tr){
+      const slotId = tr.id;
+      const data = getMissionData(slotId);
+      tr.querySelectorAll('.mission-group').forEach(function(group){
+        const cat = group.dataset.cat;
+        const catData = data.cats[cat];
+        if(!catData) return;
+        group.querySelectorAll('.mission-btn').forEach(function(btn, idx){
+          const btnComplete = btn.classList.contains('bg-complete');
+          const m = catData.missions[idx];
+          if(!m) return;
+          const cardComplete = m.target > 0 && m.current >= m.target;
+          if(btnComplete !== cardComplete){
+            applyMissionCompletionEffects(slotId, cat, idx, btnComplete, 'mainTable', { silent:true });
+          } else {
+            m.awarded = cardComplete;
+          }
+        });
+      });
+    });
+    persistMissionState();
+  }
+
+  /* ---------- Mission name autocomplete ---------- */
+  // A single shared floating dropdown, repositioned under whichever
+  // .mc-m-name input is currently focused. Tab or Enter accepts the
+  // highlighted suggestion; Up/Down moves the highlight; Escape closes it.
+  let acEl = null;
+  let acInput = null;
+  let acMatches = [];
+  let acActiveIndex = -1;
+
+  function ensureAutocompleteEl(){
+    if(acEl) return acEl;
+    acEl = document.createElement('div');
+    acEl.className = 'mc-autocomplete';
+    document.body.appendChild(acEl);
+    // Keep focus on the text input when clicking a suggestion.
+    acEl.addEventListener('mousedown', function(e){ e.preventDefault(); });
+    return acEl;
+  }
+
+  function highlightMatch(name, query){
+    if(!query) return escapeHtml(name);
+    const idx = name.toLowerCase().indexOf(query.toLowerCase());
+    if(idx === -1) return escapeHtml(name);
+    return escapeHtml(name.slice(0, idx)) +
+      '<span class="ac-match">' + escapeHtml(name.slice(idx, idx + query.length)) + '</span>' +
+      escapeHtml(name.slice(idx + query.length));
+  }
+
+  function positionAutocomplete(){
+    if(!acInput) return;
+    const el = ensureAutocompleteEl();
+    const rect = acInput.getBoundingClientRect();
+    el.style.left = Math.round(rect.left) + 'px';
+    el.style.top = Math.round(rect.bottom + 3) + 'px';
+    el.style.width = Math.max(rect.width, 220) + 'px';
+  }
+
+  function renderAutocomplete(){
+    const el = ensureAutocompleteEl();
+    if(!acInput || !acMatches.length){ el.classList.remove('open'); return; }
+    const query = acInput.value.trim();
+    el.innerHTML = '<div class="mc-autocomplete-hint">Tab to fill in</div>' + acMatches.map(function(name, i){
+      return '<div class="mc-autocomplete-item' + (i === acActiveIndex ? ' active' : '') + '" data-idx="' + i + '">' +
+        highlightMatch(name, query) + '</div>';
+    }).join('');
+    Array.from(el.querySelectorAll('.mc-autocomplete-item')).forEach(function(item){
+      item.addEventListener('mousedown', function(e){
+        e.preventDefault();
+        acceptAutocomplete(parseInt(item.dataset.idx, 10));
+      });
+    });
+    el.classList.add('open');
+    positionAutocomplete();
+  }
+
+  function openAutocomplete(input, cat){
+    const list = MISSION_NAME_LIBRARY[cat] || [];
+    const query = input.value.trim().toLowerCase();
+    const matches = list.filter(function(name){ return name.toLowerCase().indexOf(query) !== -1; }).slice(0, 8);
+    acInput = input;
+    acMatches = matches;
+    acActiveIndex = matches.length ? 0 : -1;
+    renderAutocomplete();
+  }
+
+  function closeAutocomplete(){
+    acInput = null;
+    acMatches = [];
+    acActiveIndex = -1;
+    if(acEl) acEl.classList.remove('open');
+  }
+
+  function moveAutocompleteActive(delta){
+    if(!acMatches.length) return;
+    acActiveIndex = (acActiveIndex + delta + acMatches.length) % acMatches.length;
+    renderAutocomplete();
+  }
+
+  function acceptAutocomplete(idx){
+    if(idx == null) idx = acActiveIndex;
+    if(!acInput || idx < 0 || idx >= acMatches.length) return;
+    const input = acInput;
+    input.value = acMatches[idx];
+    input.dispatchEvent(new Event('change', { bubbles:true }));
+    closeAutocomplete();
+    input.focus();
+    const len = input.value.length;
+    input.setSelectionRange(len, len);
+  }
+
+  // Close the dropdown on any click outside the input or the dropdown itself.
+  document.addEventListener('mousedown', function(e){
+    if(!acEl || !acEl.classList.contains('open')) return;
+    if(acInput && (e.target === acInput || acEl.contains(e.target))) return;
+    closeAutocomplete();
+  });
+
+  function bindMissionNameAutocomplete(card, slotId){
+    const missionsEl = card.querySelector('.mc-missions');
+
+    missionsEl.addEventListener('input', function(e){
+      if(!e.target.classList.contains('mc-m-name')) return;
+      const data = getMissionData(slotId);
+      openAutocomplete(e.target, data.activeCat);
+    });
+
+    // focus doesn't bubble, but capture-phase listeners still see it on the way down.
+    missionsEl.addEventListener('focus', function(e){
+      if(!e.target.classList.contains('mc-m-name')) return;
+      const data = getMissionData(slotId);
+      openAutocomplete(e.target, data.activeCat);
+    }, true);
+
+    missionsEl.addEventListener('keydown', function(e){
+      if(!e.target.classList.contains('mc-m-name')) return;
+      if(!acEl || !acEl.classList.contains('open') || acInput !== e.target) return;
+      if(e.key === 'Tab' || e.key === 'Enter'){
+        e.preventDefault();
+        acceptAutocomplete(acActiveIndex);
+      } else if(e.key === 'ArrowDown'){
+        e.preventDefault();
+        moveAutocompleteActive(1);
+      } else if(e.key === 'ArrowUp'){
+        e.preventDefault();
+        moveAutocompleteActive(-1);
+      } else if(e.key === 'Escape'){
+        closeAutocomplete();
+      }
+    });
+
+    missionsEl.addEventListener('focusout', function(e){
+      if(!e.target.classList.contains('mc-m-name')) return;
+      setTimeout(function(){
+        if(acInput === e.target) closeAutocomplete();
+      }, 120);
+    });
+  }
+
+  function renderMissionTrackers(){
+    const container = document.getElementById('mission-tracker-container');
+    if(!container) return;
+    container.innerHTML = '';
+    document.querySelectorAll('#table-body tr').forEach(function(tr, i){
+      const nameInput = tr.querySelector('.f-name');
+      const name = (nameInput && nameInput.value.trim()) || ('Slot ' + (i+1));
+      container.insertAdjacentHTML('beforeend', buildMissionCardHtml(tr.id, name, i+1));
+    });
+    document.querySelectorAll('.mission-card').forEach(function(card){
+      bindMissionCardEvents(card);
+      renderMissionCatBody(card);
+    });
+  }
+
+  function updateMissionCardName(slotId, name){
+    const el = document.querySelector('.mission-card[data-slot="' + slotId + '"] .mc-name');
+    if(el) el.textContent = name;
+  }
+
+  function buildMissionCardHtml(slotId, name, num){
+    const data = getMissionData(slotId);
+    const tr = document.getElementById(slotId);
+    const activeStars = tr ? tr.querySelectorAll('.star-active').length : 0;
+    const starsHtml = STAR_REWARDS.map(function(reward, i){
+      const active = i < activeStars;
+      return '<div class="mc-star-col"><span class="mc-star-btn ' + (active ? 'mc-star-active' : '') + '" data-idx="' + i + '">★<span class="mc-star-reward">' + reward + '</span></span></div>';
+    }).join('');
+    const tabsHtml = ['HR','DA','WK','MO'].map(function(cat){
+      const active = data.activeCat === cat;
+      return '<button type="button" class="mc-tab cat-' + cat.toLowerCase() + (active ? ' mc-tab-active' : '') + '" data-cat="' + cat + '">' + CAT_NAMES[cat] + '</button>';
+    }).join('');
+    return '<div class="mission-card" data-slot="' + slotId + '">' +
+      '<div class="mc-head">' +
+        '<span class="mc-slot-num">#' + num + '</span><span class="mc-name">' + escapeHtml(name) + '</span>' +
+        '<div class="mc-stars">' +
+          '<span class="mc-stars-label">Daily Stars</span>' +
+          '<div class="mc-stars-row">' + starsHtml + '</div>' +
+          '<span class="mini-reset mc-stars-reset" title="Reset Daily Stars">↺</span>' +
+        '</div>' +
+      '</div>' +
+      '<div class="mc-cat-head">' +
+        '<span class="mc-cat-title mc-cat-title-target"></span>' +
+        '<span class="mc-timer-wrap"><input type="text" class="mc-timer" value="" title="Scroll over a segment (days/hours/minutes/seconds) to adjust it"><span class="mc-timer-reset" title="Reset timer &amp; missions">↺</span></span>' +
+      '</div>' +
+      '<div class="mc-missions"></div>' +
+      '<div class="mc-tabs">' + tabsHtml + '</div>' +
+    '</div>';
+  }
+
+  function renderMissionCatBody(card){
+    const slotId = card.dataset.slot;
+    const data = getMissionData(slotId);
+    const cat = data.activeCat;
+    const catData = data.cats[cat];
+
+    card.querySelectorAll('.mc-tab').forEach(function(btn){
+      btn.classList.toggle('mc-tab-active', btn.dataset.cat === cat);
+    });
+    card.querySelector('.mc-cat-title-target').textContent = CAT_NAMES[cat] + ' Missions';
+    const timerInput = card.querySelector('.mc-timer');
+    if(document.activeElement !== timerInput){
+      timerInput.value = formatCountdown(liveRemainingSec(catData) * 1000);
+    }
+
+    const missionsHtml = catData.missions.map(function(m, idx){
+      const pct = missionPct(m);
+      const complete = m.target > 0 && m.current >= m.target;
+      return '<div class="mc-mission-row' + (complete ? ' mc-complete' : '') + '" data-idx="' + idx + '">' +
+        '<div class="mc-m-top">' +
+          '<input type="text" class="mc-m-name" value="' + escapeHtml(m.name) + '" placeholder="Mission name">' +
+          '<div class="mc-m-nums">' +
+            '<input type="text" inputmode="numeric" class="mc-m-current" value="' + m.current + '" title="Scroll to adjust">' +
+            '<span class="mc-m-slash">/</span>' +
+            '<input type="text" inputmode="numeric" class="mc-m-target" value="' + m.target + '" title="Scroll to adjust">' +
+          '</div>' +
+        '</div>' +
+        '<div class="mc-m-bottom">' +
+          '<input type="text" inputmode="numeric" class="mc-m-reward" value="' + m.reward + '" title="Coin reward — scroll to adjust">' +
+          '<div class="mc-m-bar"><div class="mc-m-fill" style="width:' + pct + '%"></div></div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+    card.querySelector('.mc-missions').innerHTML = missionsHtml;
+  }
+
+  function bindMissionCardEvents(card){
+    const slotId = card.dataset.slot;
+
+    attachMissionWheelDelegate(card.querySelector('.mc-missions'));
+    bindMissionNameAutocomplete(card, slotId);
+
+    card.querySelectorAll('.mc-star-btn').forEach(function(star){
+      star.addEventListener('click', function(){
+        pushUndoSnapshot();
+        const idx = parseInt(this.dataset.idx, 10);
+        const currentActive = card.querySelectorAll('.mc-star-active').length;
+        const target = idx + 1;
+        const fillLimit = (currentActive === target) ? idx : target;
+        const tr = document.getElementById(slotId);
+        if(tr) setSlotStarCount(tr, fillLimit);
+      });
+    });
+
+    const starsResetBtn = card.querySelector('.mc-stars-reset');
+    if(starsResetBtn){
+      starsResetBtn.addEventListener('click', function(){
+        pushUndoSnapshot();
+        const tr = document.getElementById(slotId);
+        if(tr) setSlotStarCount(tr, 0);
+      });
+    }
+
+    card.querySelectorAll('.mc-tab').forEach(function(tab){
+      tab.addEventListener('click', function(){
+        const data = getMissionData(slotId);
+        data.activeCat = this.dataset.cat;
+        persistMissionState();
+        renderMissionCatBody(card);
+      });
+    });
+
+    const timerEl = card.querySelector('.mc-timer');
+    timerEl.addEventListener('focus', function(){
+      this.select();
+      this._editStartedAt = Date.now();
+    });
+    timerEl.addEventListener('change', function(){
+      const data = getMissionData(slotId);
+      const cat = data.activeCat;
+      const catData = data.cats[cat];
+      const parsed = parseDHMS(this.value);
+      if(parsed !== null){
+        // The value typed reflects the countdown at the moment they started
+        // typing it, not now — subtract however long that took so it lines
+        // up exactly instead of running a few seconds fast.
+        const typingSec = Math.max(0, Math.round((Date.now() - (this._editStartedAt || Date.now())) / 1000));
+        const capped = Math.min(parsed, CAT_DURATION_SEC[cat]);
+        catData.remainingSec = Math.max(0, capped - typingSec);
+        catData.lastTick = Date.now();
+        persistMissionState();
+      }
+      this._editStartedAt = null;
+      this.value = formatCountdown(liveRemainingSec(catData) * 1000);
+    });
+    timerEl.addEventListener('wheel', function(e){
+      e.preventDefault();
+      const data = getMissionData(slotId);
+      const cat = data.activeCat;
+      const catData = data.cats[cat];
+      const seg = timerSegmentAtX(this, e.clientX); // 0=days, 1=hours, 2=minutes, 3=seconds
+      const unitSeconds = [86400, 3600, 60, 1][seg];
+      const step = wheelStep(e);
+      const delta = (e.deltaY < 0 ? step : -step) * unitSeconds;
+      const newTotal = Math.max(0, Math.min(CAT_DURATION_SEC[cat], liveRemainingSec(catData) + delta));
+      catData.remainingSec = newTotal;
+      catData.lastTick = Date.now();
+      persistMissionState();
+      this.value = formatCountdown(newTotal * 1000);
+    }, { passive:false });
+
+    card.querySelector('.mc-timer-reset').addEventListener('click', function(){
+      const data = getMissionData(slotId);
+      const cat = data.activeCat;
+      data.cats[cat].remainingSec = CAT_DURATION_SEC[cat];
+      data.cats[cat].lastTick = Date.now();
+      data.cats[cat].missions.forEach(function(m, idx){
+        m.current = 0;
+        applyMissionCompletionEffects(slotId, cat, idx, false, 'card', { silent:true });
+      });
+      persistMissionState();
+      renderMissionCatBody(card);
+      showToast(CAT_NAMES[cat] + ' timer & missions reset');
+    });
+
+    card.querySelector('.mc-missions').addEventListener('change', function(e){
+      const row = e.target.closest('.mc-mission-row');
+      if(!row) return;
+      const data = getMissionData(slotId);
+      const cat = data.activeCat;
+      const catData = data.cats[cat];
+      const idx = parseInt(row.dataset.idx, 10);
+      const m = catData.missions[idx];
+      if(!m) return;
+
+      if(e.target.classList.contains('mc-m-reward')){
+        let v = parseInt(e.target.value, 10); if(isNaN(v) || v < 0) v = 0;
+        m.reward = v; e.target.value = v;
+        persistMissionState();
+      } else if(e.target.classList.contains('mc-m-name')){
+        m.name = e.target.value.trim();
+        const parsedTarget = parseTargetFromMissionName(m.name);
+        if(parsedTarget && parsedTarget > 0 && parsedTarget !== m.target){
+          // The mission's requirement changed (e.g. renamed from "Get 2
+          // Multikills" to "Get 4 Multi-Kills") — snap the target to match,
+          // reset progress to 0/target, and if it was already complete,
+          // claw back the credits it paid out since it no longer qualifies.
+          m.target = parsedTarget;
+          m.current = 0;
+          row.querySelector('.mc-m-target').value = m.target;
+          row.querySelector('.mc-m-current').value = m.current;
+          applyMissionCompletionEffects(slotId, cat, idx, false, 'card');
+          showToast('Target set to ' + parsedTarget + ' — progress reset to 0/' + parsedTarget);
+        }
+        persistMissionState();
+      } else if(e.target.classList.contains('mc-m-current')){
+        let v = parseInt(e.target.value, 10); if(isNaN(v) || v < 0) v = 0;
+        if(m.target > 0 && v > m.target) v = m.target;
+        m.current = v; e.target.value = v;
+        const complete = m.target > 0 && v >= m.target;
+        applyMissionCompletionEffects(slotId, cat, idx, complete, 'card');
+      } else if(e.target.classList.contains('mc-m-target')){
+        let v = parseInt(e.target.value, 10); if(isNaN(v) || v < 1) v = 1;
+        m.target = v; e.target.value = v;
+        if(m.current > v){
+          m.current = v;
+          row.querySelector('.mc-m-current').value = v;
+        }
+        const complete = m.current >= v;
+        applyMissionCompletionEffects(slotId, cat, idx, complete, 'card');
+      } else {
+        return;
+      }
+      const pct = missionPct(m);
+      const complete = m.target > 0 && m.current >= m.target;
+      row.classList.toggle('mc-complete', complete);
+      row.querySelector('.mc-m-fill').style.width = pct + '%';
+    });
+  }
+
+  function tickMissionTimers(){
+    document.querySelectorAll('.mission-card').forEach(function(card){
+      const timerInput = card.querySelector('.mc-timer');
+      if(!timerInput || document.activeElement === timerInput) return;
+      const slotId = card.dataset.slot;
+      const data = getMissionData(slotId);
+      const catData = data.cats[data.activeCat];
+      timerInput.value = formatCountdown(liveRemainingSec(catData) * 1000);
+    });
+  }
+
+  function markDirty(tr){
+    tr.dataset.dirty = 'true';
+    tr.classList.add('dirty');
+    updateUnsavedBanner();
+  }
+
+  function updateUnsavedBanner(){
+    const any = !!document.querySelector('#table-body tr.dirty');
+    document.getElementById('unsaved-banner').classList.toggle('hidden', !any);
+  }
+
+  function readRowData(tr){
+    const missions = [];
+    tr.querySelectorAll('.mission-btn').forEach(function(b){ missions.push(b.classList.contains('bg-complete')); });
+    return {
+      id: tr.id,
+      name: tr.querySelector('.f-name').value,
+      level: Math.max(1, parseInt(tr.querySelector('.f-level').value, 10) || 1),
+      credits: parseInt(tr.querySelector('.f-credits').value, 10) || 0,
+      stars: tr.querySelectorAll('.star-active').length,
+      starsAwarded: parseInt(tr.dataset.starsAwarded, 10) || 0,
+      missions: missions,
+      time: tr.querySelector('.f-time').textContent
+    };
+  }
+
+  // Daily Stars pay out their stacked credit value immediately, just like
+  // missions — 1 star = 13, 2 stars = 13+26, 3 stars = 13+26+39, etc. Only the
+  // change since the last award is applied, so toggling back and forth never
+  // double-pays, and pulling stars back down claws back the difference (same
+  // "exact amount, never short" rule missions follow).
+  function applyStarCreditsOnSave(tr){
+    const currentStars = tr.querySelectorAll('.star-active').length;
+    const previousAwarded = parseInt(tr.dataset.starsAwarded, 10) || 0;
+    if(currentStars === previousAwarded) return;
+    const delta = starCumulativeReward(currentStars) - starCumulativeReward(previousAwarded);
+    tr.dataset.starsAwarded = String(currentStars);
+    if(delta === 0) return;
+    applyCreditDelta(tr, delta);
+    if(delta > 0){
+      showToast('+' + delta + ' credits — Daily Stars (' + currentStars + '/7) saved');
+    } else {
+      showToast(delta + ' credits — Daily Stars adjusted');
+    }
+  }
+
+  function commitSlot(btn){
+    pushUndoSnapshot();
+    const tr = btn.closest('tr');
+    const id = tr.id;
+    applyStarCreditsOnSave(tr);
+    const slotData = readRowData(tr);
+    slotData.time = getFormattedTime();
+
+    const idx = appState.slots.findIndex(function(s){ return s.id === id; });
+    if(idx >= 0) appState.slots[idx] = slotData; else appState.slots.push(slotData);
+    persistAppState();
+
+    tr.dataset.dirty = 'false';
+    tr.classList.remove('dirty');
+    tr.querySelector('.f-time').textContent = slotData.time;
+    updateUnsavedBanner();
+    flashSaved(btn);
+    recalcGlobalFooter();
+  }
+
+  function flashSaved(btn){
+    const original = btn.textContent;
+    btn.textContent = 'Saved ✓';
+    btn.classList.add('just-saved');
+    setTimeout(function(){ btn.textContent = original; btn.classList.remove('just-saved'); }, 1600);
+  }
+
+  function saveAll(){
+    const dirtyRows = document.querySelectorAll('#table-body tr.dirty');
+    if(dirtyRows.length === 0){ showToast('Nothing to save'); return; }
+    dirtyRows.forEach(function(tr){ commitSlot(tr.querySelector('.save-btn')); });
+    showToast('All slots saved');
+  }
+
+  /* ---------- interactions ---------- */
+  function toggleMission(btn){
+    pushUndoSnapshot();
+    const tr = btn.closest('tr');
+    const group = btn.closest('.mission-group');
+    const cat = group.dataset.cat;
+    const idx = Array.from(group.querySelectorAll('.mission-btn')).indexOf(btn);
+    const complete = !btn.classList.contains('bg-complete');
+    btn.classList.toggle('bg-complete', complete);
+    btn.classList.toggle('bg-incomplete', !complete);
+    markDirty(tr);
+    applyMissionCompletionEffects(tr.id, cat, idx, complete, 'mainTable');
+  }
+
+  // Single source of truth for a slot's Daily Stars is the main table row's
+  // .star-btn elements. The mission-tracker card's star widget just mirrors
+  // that state — clicking a star in either place updates the row and then
+  // syncs the other widget, so they can never drift apart. Credits are paid
+  // out from this same count when the slot is saved (see applyStarCreditsOnSave).
+  function setSlotStarCount(tr, fillLimit){
+    tr.querySelectorAll('.star-btn').forEach(function(s, i){
+      s.classList.toggle('star-active', i < fillLimit);
+      s.classList.toggle('star-inactive', i >= fillLimit);
+    });
+    markDirty(tr);
+    applyStarCreditsOnSave(tr);
+    recalcRow(tr);
+    recalcGlobalFooter();
+    syncMissionCardStars(tr.id);
+  }
+
+  function syncMissionCardStars(slotId){
+    const tr = document.getElementById(slotId);
+    const card = getMissionCard(slotId);
+    if(!card) return;
+    const activeCount = tr ? tr.querySelectorAll('.star-active').length : 0;
+    card.querySelectorAll('.mc-star-btn').forEach(function(s, i){
+      s.classList.toggle('mc-star-active', i < activeCount);
+    });
+  }
+
+  function setStar(el){
+    pushUndoSnapshot();
+    const container = el.parentElement;
+    const idx = parseInt(el.dataset.idx, 10);
+    const currentActive = container.querySelectorAll('.star-active').length;
+    const target = idx + 1;
+    const fillLimit = (currentActive === target) ? idx : target;
+    setSlotStarCount(el.closest('tr'), fillLimit);
+  }
+
+  function resetStars(el){
+    pushUndoSnapshot();
+    setSlotStarCount(el.closest('tr'), 0);
+  }
+
+  function resetCategory(el){
+    pushUndoSnapshot();
+    const td = el.closest('.col-mission-cat');
+    const group = td.querySelector('.mission-group');
+    const cat = group.dataset.cat;
+    const tr = el.closest('tr');
+    group.querySelectorAll('.mission-btn').forEach(function(b, idx){
+      b.classList.remove('bg-complete');
+      b.classList.add('bg-incomplete');
+      applyMissionCompletionEffects(tr.id, cat, idx, false, 'mainTable', { silent:true });
+    });
+    markDirty(tr);
+  }
+
+  /* ---------- calculations ---------- */
+  function updateRankLabel(tr){
+    const levelInput = tr.querySelector('.f-level');
+    const nameEl = tr.querySelector('.f-rank-name');
+    if(!levelInput) return;
+    const level = Math.max(1, Math.min(40, parseInt(levelInput.value, 10) || 1));
+    levelInput.title = rankLabelForLevel(level) + ' — Scroll to adjust';
+    if(nameEl) nameEl.textContent = rankNameForLevel(level) + ' Rank';
+  }
+
+  function recalcRow(tr){
+    tr.querySelectorAll('.col-mission-cat').forEach(function(td){
+      const group = td.querySelector('.mission-group');
+      const countSpan = td.querySelector('.cat-count');
+      const complete = group.querySelectorAll('.bg-complete').length;
+      countSpan.textContent = complete + '/4';
+    });
+    updateRankLabel(tr);
+  }
+
+  function recalcGlobalFooter(){
+    const rows = document.querySelectorAll('#table-body tr');
+    const n = rows.length;
+    let sumCredits = 0, sumLevel = 0, sumStars = 0, sumMissions = 0;
+    const catSums = { HR:0, DA:0, WK:0, MO:0 };
+
+    rows.forEach(function(tr){
+      sumCredits += parseInt(tr.querySelector('.f-credits').value, 10) || 0;
+      sumLevel += parseInt(tr.querySelector('.f-level').value, 10) || 0;
+      sumStars += tr.querySelectorAll('.star-active').length;
+      tr.querySelectorAll('.mission-group').forEach(function(group){
+        const cat = group.dataset.cat;
+        const c = group.querySelectorAll('.bg-complete').length;
+        catSums[cat] += c;
+        sumMissions += c;
+      });
+    });
+
+    const missionTotal = n*16;
+    const rankTotal = n*40;
+    const starTotal = n*7;
+    const catTotal = n*4;
+    const pct = function(val, total){ return total ? Math.round((val/total)*100) : 0; };
+
+    document.getElementById('foot-accounts').textContent = n;
+    document.getElementById('foot-credits').textContent = sumCredits;
+    document.getElementById('foot-ranks').textContent = sumLevel + '/' + rankTotal;
+    document.getElementById('foot-ranks-pct').textContent = pct(sumLevel, rankTotal) + '%';
+    document.getElementById('foot-stars').textContent = sumStars + '/' + starTotal;
+    document.getElementById('foot-stars-pct').textContent = pct(sumStars, starTotal) + '%';
+    document.getElementById('foot-missions').textContent = sumMissions + '/' + missionTotal;
+    document.getElementById('foot-missions-pct').textContent = pct(sumMissions, missionTotal) + '%';
+    document.getElementById('foot-cat-hr').textContent = catSums.HR + '/' + catTotal;
+    document.getElementById('foot-cat-hr-pct').textContent = pct(catSums.HR, catTotal) + '%';
+    document.getElementById('foot-cat-da').textContent = catSums.DA + '/' + catTotal;
+    document.getElementById('foot-cat-da-pct').textContent = pct(catSums.DA, catTotal) + '%';
+    document.getElementById('foot-cat-wk').textContent = catSums.WK + '/' + catTotal;
+    document.getElementById('foot-cat-wk-pct').textContent = pct(catSums.WK, catTotal) + '%';
+    document.getElementById('foot-cat-mo').textContent = catSums.MO + '/' + catTotal;
+    document.getElementById('foot-cat-mo-pct').textContent = pct(catSums.MO, catTotal) + '%';
+  }
+
+  /* ---------- export ---------- */
+  function exportToText(){
+    const rows = document.querySelectorAll('#table-body tr');
+    const n = rows.length;
+    let totalMissions = 0, totalStars = 0, totalCredits = 0;
+    const lines = [];
+    lines.push('BloxStrike — Status Report');
+    lines.push('Legend: G = complete   R = incomplete');
+    lines.push('-'.repeat(42));
+
+    rows.forEach(function(tr, idx){
+      const name = tr.querySelector('.f-name').value.trim() || ('Slot ' + (idx+1));
+      const level = parseInt(tr.querySelector('.f-level').value, 10) || 0;
+      const credits = parseInt(tr.querySelector('.f-credits').value, 10) || 0;
+      const stars = tr.querySelectorAll('.star-active').length;
+      totalCredits += credits;
+      totalStars += stars;
+
+      let rowMissionTotal = 0;
+      const catStrings = [];
+      tr.querySelectorAll('.mission-group').forEach(function(group){
+        const cat = group.dataset.cat;
+        const marks = Array.from(group.querySelectorAll('.mission-btn')).map(function(b){
+          return b.classList.contains('bg-complete') ? 'G' : 'R';
+        });
+        rowMissionTotal += marks.filter(function(m){ return m === 'G'; }).length;
+        catStrings.push(cat + ' ' + marks.join(' '));
+      });
+      totalMissions += rowMissionTotal;
+
+      lines.push((idx+1) + '. ' + name + ' — ' + rankLabelForLevel(level) + '/40 — ' + credits + ' credits');
+      lines.push('   Missions ' + rowMissionTotal + '/16 (' + catStrings.join(' | ') + ')');
+      lines.push('   Stars ' + stars + '/7');
+      lines.push('-'.repeat(42));
+    });
+
+    lines.push(totalMissions + '/' + (n*16) + ' Missions');
+    lines.push(totalStars + '/' + (n*7) + ' Stars');
+    lines.push(totalCredits + ' Total Credits');
+    lines.push(n + ' Account' + (n !== 1 ? 's' : '') + ' tracked');
+
+    const text = lines.join('\n');
+    navigator.clipboard.writeText(text).then(function(){
+      showToast('Report copied to clipboard');
+    }).catch(function(){
+      showToast('⚠ Copy failed — select text manually');
+    });
+  }
+
+  /* ---------- full data backup (export/import) ---------- */
+  function rebuildTableFromState(){
+    document.getElementById('table-body').innerHTML = '';
+    if(appState.slots.length === 0){
+      addSlot();
+    } else {
+      appState.slots.slice().forEach(function(s){ addSlot(s); });
+    }
+    renumber();
+    recalcGlobalFooter();
+    renderSlotStyleSettings();
+    updateUnsavedBanner();
+  }
+
+  function exportData(){
+    // Commit any pending edits first so the backup reflects exactly what's on screen.
+    document.querySelectorAll('#table-body tr.dirty').forEach(function(tr){
+      commitSlot(tr.querySelector('.save-btn'));
+    });
+
+    const backup = {
+      app: 'bloxstrike-tracker',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      appState: appState,
+      styleData: styleData
+    };
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'bloxstrike-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);
+    showToast('Backup downloaded — keep this file to restore your data later');
+  }
+
+  function triggerImportData(){
+    document.getElementById('import-file-input').click();
+  }
+
+  function handleImportFile(e){
+    const input = e.target;
+    const file = input.files && input.files[0];
+    if(!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(){
+      let parsed;
+      try{
+        parsed = JSON.parse(reader.result);
+      }catch(err){
+        showToast('⚠ Import failed — that file is not valid JSON');
+        input.value = '';
+        return;
+      }
+
+      const incomingAppState = (parsed && parsed.appState) ? parsed.appState : parsed;
+      const incomingStyle = (parsed && parsed.styleData) ? parsed.styleData : null;
+
+      if(!incomingAppState || !Array.isArray(incomingAppState.slots)){
+        showToast('⚠ Import failed — this file has no slot data');
+        input.value = '';
+        return;
+      }
+
+      const currentCount = appState.slots.length;
+      const hasUnsaved = !!document.querySelector('#table-body tr.dirty');
+      const warning = 'This will replace your current ' + currentCount + ' slot(s) with ' +
+        incomingAppState.slots.length + ' slot(s) from the backup file.' +
+        (hasUnsaved ? ' You also have unsaved edits on screen that will be lost.' : '') +
+        ' This cannot be undone. Continue?';
+      const proceed = currentCount === 0 || window.confirm(warning);
+      if(!proceed){ input.value = ''; return; }
+
+      appState = incomingAppState;
+      if(!Array.isArray(appState.slots)) appState.slots = [];
+      if(incomingStyle) styleData = Object.assign(defaultStyle(), incomingStyle);
+      if(!styleData.slots) styleData.slots = {};
+
+      persistAppState();
+      persistStyle();
+      rebuildTableFromState();
+      applyGlobalStyle();
+      clearUndoHistory();
+      showToast('Data imported successfully');
+      input.value = '';
+    };
+    reader.onerror = function(){
+      showToast('⚠ Import failed — could not read that file');
+      input.value = '';
+    };
+    reader.readAsText(file);
+  }
+
+  /* ---------- import report (reverses exportToText's format) ---------- */
+  function parseReportText(text){
+    const lines = String(text || '').split('\n');
+    const slots = [];
+    let current = null;
+
+    const headerRe = /^\s*\d+\.\s+(.*?)\s+—\s+.*?Rank\s+(\d+)\/40\s+—\s+(\d+)\s+credits\s*$/;
+    const missionsRe = /^\s*Missions\s+\d+\/16\s+\((.*)\)\s*$/;
+    const starsRe = /^\s*Stars\s+(\d+)\/7\s*$/;
+
+    lines.forEach(function(line){
+      let m = headerRe.exec(line);
+      if(m){
+        if(current) slots.push(current);
+        current = { name:m[1].trim(), level:parseInt(m[2],10) || 1, credits:parseInt(m[3],10) || 0, stars:0, missions:Array(16).fill(false) };
+        return;
+      }
+      if(current){
+        m = missionsRe.exec(line);
+        if(m){
+          m[1].split('|').forEach(function(part){
+            const tokens = part.trim().split(/\s+/);
+            const cat = tokens[0];
+            const ci = CATEGORIES.indexOf(cat);
+            if(ci === -1) return;
+            tokens.slice(1).forEach(function(tok, i){
+              if(i > 3) return;
+              current.missions[ci*4+i] = (tok === 'G');
+            });
+          });
+          return;
+        }
+        m = starsRe.exec(line);
+        if(m){ current.stars = Math.max(0, Math.min(7, parseInt(m[1],10) || 0)); return; }
+      }
+    });
+    if(current) slots.push(current);
+    return slots;
+  }
+
+  function triggerImportReport(){
+    document.getElementById('import-report-textarea').value = '';
+    document.getElementById('import-report-modal').classList.add('open');
+    document.getElementById('import-report-overlay').classList.add('active');
+  }
+
+  function closeImportReportModal(){
+    document.getElementById('import-report-modal').classList.remove('open');
+    document.getElementById('import-report-overlay').classList.remove('active');
+  }
+
+  function confirmImportReport(){
+    const text = document.getElementById('import-report-textarea').value;
+    const parsedSlots = parseReportText(text);
+    if(parsedSlots.length === 0){
+      showToast('⚠ Import failed — no recognizable slots in that text');
+      return;
+    }
+
+    const currentCount = appState.slots.length;
+    const hasUnsaved = !!document.querySelector('#table-body tr.dirty');
+    const warning = 'This will replace your current ' + currentCount + ' slot(s) with ' +
+      parsedSlots.length + ' slot(s) from the pasted report.' +
+      (hasUnsaved ? ' You also have unsaved edits on screen that will be lost.' : '') +
+      ' This cannot be undone. Continue?';
+    if(currentCount > 0 && !window.confirm(warning)) return;
+
+    pushUndoSnapshot();
+    slotCounter = 0;
+    appState.slots = parsedSlots.map(function(s){
+      slotCounter++;
+      return {
+        id: 'slot-' + slotCounter, name: s.name, level: s.level, credits: s.credits,
+        stars: s.stars, starsAwarded: s.stars, missions: s.missions, time: '—'
+      };
+    });
+    persistAppState();
+    rebuildTableFromState();
+    clearUndoHistory();
+    closeImportReportModal();
+    showToast('Report imported successfully');
+  }
+
+  /* ---------- drag and drop ---------- */
+  function attachDragEvents(tr){
+    const handle = tr.querySelector('.drag-handle');
+    handle.addEventListener('mousedown', function(){ tr.setAttribute('draggable','true'); });
+    handle.addEventListener('mouseup', function(){ tr.removeAttribute('draggable'); });
+    handle.addEventListener('mouseleave', function(){ tr.removeAttribute('draggable'); });
+
+    tr.addEventListener('dragstart', function(e){
+      draggedRow = this;
+      setTimeout(function(){ tr.classList.add('dragging'); }, 0);
+      e.dataTransfer.effectAllowed = 'move';
+    });
+    tr.addEventListener('dragover', function(e){
+      e.preventDefault();
+      this.classList.add('drag-over');
+    });
+    tr.addEventListener('dragleave', function(){ this.classList.remove('drag-over'); });
+    tr.addEventListener('drop', function(e){
+      e.preventDefault();
+      this.classList.remove('drag-over');
+      if(draggedRow !== this){
+        pushUndoSnapshot();
+        const rows = Array.from(document.querySelectorAll('#table-body tr'));
+        if(rows.indexOf(draggedRow) < rows.indexOf(this)) this.after(draggedRow);
+        else this.before(draggedRow);
+      }
+      renumber();
+      persistOrder();
+      renderSlotStyleSettings();
+    });
+    tr.addEventListener('dragend', function(){
+      this.classList.remove('dragging');
+      draggedRow = null;
+      tr.removeAttribute('draggable');
+      document.querySelectorAll('#table-body tr').forEach(function(r){ r.classList.remove('drag-over'); });
+    });
+  }
+
+  function persistOrder(){
+    const order = Array.from(document.querySelectorAll('#table-body tr')).map(function(r){ return r.id; });
+    appState.slots.sort(function(a,b){ return order.indexOf(a.id) - order.indexOf(b.id); });
+    persistAppState();
+  }
+
+  /* ---------- undo / redo ---------- */
+  const MAX_UNDO_STEPS = 50;
+  let undoStack = [];
+  let redoStack = [];
+  let pendingEditSnapshot = null;
+  let pendingEditEl = null;
+
+  function captureSnapshot(){
+    // Text inputs decouple their live `.value` property from the `value`
+    // attribute once a user types in them, so innerHTML alone would freeze
+    // stale attribute text into the snapshot. Sync attributes first so
+    // typed-but-uncommitted text survives undo/redo correctly.
+    document.querySelectorAll('#table-body input[type=text]').forEach(function(inp){
+      inp.setAttribute('value', inp.value);
+    });
+    return {
+      html: document.getElementById('table-body').innerHTML,
+      state: JSON.stringify(appState)
+    };
+  }
+
+  function pushUndoSnapshot(){
+    undoStack.push(captureSnapshot());
+    if(undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
+    redoStack = [];
+    updateUndoRedoButtons();
+  }
+
+  function restoreSnapshot(snap){
+    document.getElementById('table-body').innerHTML = snap.html;
+    appState = JSON.parse(snap.state);
+    document.querySelectorAll('#table-body tr').forEach(function(tr){
+      attachRowEvents(tr);
+      applySlotStyle(tr.id);
+      recalcRow(tr);
+    });
+    renumber();
+    recalcGlobalFooter();
+    updateUnsavedBanner();
+    renderSlotStyleSettings();
+  }
+
+  function undo(){
+    if(undoStack.length === 0){ showToast('Nothing to undo'); return; }
+    redoStack.push(captureSnapshot());
+    const snap = undoStack.pop();
+    restoreSnapshot(snap);
+    persistAppState();
+    updateUndoRedoButtons();
+    showToast('Undo');
+  }
+
+  function redo(){
+    if(redoStack.length === 0){ showToast('Nothing to redo'); return; }
+    undoStack.push(captureSnapshot());
+    const snap = redoStack.pop();
+    restoreSnapshot(snap);
+    persistAppState();
+    updateUndoRedoButtons();
+    showToast('Redo');
+  }
+
+  function clearUndoHistory(){
+    undoStack = [];
+    redoStack = [];
+    updateUndoRedoButtons();
+  }
+
+  function updateUndoRedoButtons(){
+    const undoBtn = document.getElementById('btn-undo');
+    const redoBtn = document.getElementById('btn-redo');
+    if(undoBtn) undoBtn.disabled = undoStack.length === 0;
+    if(redoBtn) redoBtn.disabled = redoStack.length === 0;
+  }
+
+  // Groups rapid-fire edits inside a single text field (typing, scroll-to-adjust)
+  // into one undo step instead of one step per keystroke/notch.
+  function beginFieldEdit(el){
+    if(pendingEditEl === el) return;
+    pendingEditEl = el;
+    pendingEditSnapshot = captureSnapshot();
+    pendingEditSnapshot._value = el.value;
+  }
+  function commitFieldEdit(el){
+    if(pendingEditEl !== el || !pendingEditSnapshot) return;
+    if(pendingEditSnapshot._value !== el.value){
+      undoStack.push(pendingEditSnapshot);
+      if(undoStack.length > MAX_UNDO_STEPS) undoStack.shift();
+      redoStack = [];
+      updateUndoRedoButtons();
+    }
+    pendingEditEl = null;
+    pendingEditSnapshot = null;
+  }
+
+  /* ---------- keyboard shortcuts ---------- */
+  let kbBuffer = '';
+  let kbTimeout = null;
+  let kbHighlighted = [];
+
+  function clearKbHighlights(){
+    kbHighlighted.forEach(function(el){ el.classList.remove('kb-flash'); });
+    kbHighlighted = [];
+    document.getElementById('kb-indicator').classList.remove('active');
+  }
+
+  function restartKbTimeout(){
+    clearTimeout(kbTimeout);
+    kbTimeout = setTimeout(function(){ kbBuffer = ''; clearKbHighlights(); }, 1500);
+  }
+
+  function endKbSequence(){
+    kbBuffer = '';
+    clearTimeout(kbTimeout);
+    setTimeout(clearKbHighlights, 300);
+  }
+
+  const CAT_LETTER_TO_INDEX = { h:0, d:1, w:2, m:3 };
+
+  function catDigitFromChar(ch){
+    if(ch == null) return null;
+    if(/^[1-4]$/.test(ch)) return parseInt(ch, 10);
+    const idx = CAT_LETTER_TO_INDEX[ch.toLowerCase()];
+    return (idx != null) ? idx + 1 : null;
+  }
+
+  function highlightKbBuffer(rows, needsSlotDigit){
+    clearKbHighlights();
+    const indicator = document.getElementById('kb-indicator');
+    indicator.classList.add('active');
+
+    let row = null;
+    if(needsSlotDigit){
+      if(kbBuffer.length >= 1){
+        const rowIdx = parseInt(kbBuffer[0],10) - 1;
+        row = (rowIdx >= 0 && rowIdx < rows.length) ? rows[rowIdx] : null;
+      }
+    } else {
+      row = rows[0];
+    }
+    if(row){ row.classList.add('kb-flash'); kbHighlighted.push(row); }
+
+    const catIndex = needsSlotDigit ? 1 : 0;
+    if(row && kbBuffer.length > catIndex){
+      const catDigit = catDigitFromChar(kbBuffer[catIndex]);
+      if(catDigit != null){
+        const group = row.querySelectorAll('.mission-group')[catDigit-1];
+        if(group){ group.classList.add('kb-flash'); kbHighlighted.push(group); }
+      }
+    }
+
+    indicator.textContent = 'KEYS: ' + kbBuffer.split('').join(' → ');
+  }
+
+  function bindKeyboardShortcuts(){
+    document.addEventListener('keydown', function(e){
+      const tag = e.target.tagName;
+      if(tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+      if(e.key === 'Escape'){
+        kbBuffer = '';
+        clearTimeout(kbTimeout);
+        clearKbHighlights();
+        if(document.getElementById('shortcuts-modal').classList.contains('open')) toggleShortcuts();
+        closeImportExportMenu();
+        if(document.getElementById('import-report-modal').classList.contains('open')) closeImportReportModal();
+        return;
+      }
+
+      // Shift+, (<) undo, Shift+. (>) redo
+      if(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === '<' || e.code === 'Comma')){
+        e.preventDefault();
+        undo();
+        return;
+      }
+      if(e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key === '>' || e.code === 'Period')){
+        e.preventDefault();
+        redo();
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+
+      // Plain "S" with no sequence in progress: save every unsaved slot.
+      if(key === 's' && !e.ctrlKey && !e.metaKey && !e.altKey && kbBuffer === ''){
+        e.preventDefault();
+        saveAll();
+        return;
+      }
+
+      const rows = Array.from(document.querySelectorAll('#table-body tr'));
+      if(rows.length === 0) return;
+
+      const needsSlotDigit = rows.length > 1;
+      const isDigit = /^[1-9]$/.test(e.key);
+      const isCatLetter = /^[hdwm]$/.test(key);
+      const isR = key === 'r';
+      const isS = key === 's';
+
+      if(!isDigit && !isCatLetter && !isR && !isS) return;
+
+      const slotStageLen = needsSlotDigit ? 1 : 0;
+      const catStageLen = slotStageLen + 1;
+
+      // --- Stage 1: collecting the slot digit (only when there's more than one slot) ---
+      if(needsSlotDigit && kbBuffer.length === 0){
+        if(!isDigit) return;
+        e.preventDefault();
+        kbBuffer += e.key;
+        restartKbTimeout();
+        highlightKbBuffer(rows, needsSlotDigit);
+        return;
+      }
+
+      // --- Stage 2: collecting the category — digit 1-4 OR letter h/d/w/m — "slot + S" to save just that slot, or "slot + R" to reset the whole slot ---
+      if(kbBuffer.length === slotStageLen){
+        if(isS && needsSlotDigit){
+          e.preventDefault();
+          const slotIdx = parseInt(kbBuffer[0],10) - 1;
+          endKbSequence();
+          triggerSlotSaveShortcut(slotIdx);
+          return;
+        }
+        if(isR){
+          e.preventDefault();
+          const slotIdx = needsSlotDigit ? (parseInt(kbBuffer[0],10) - 1) : 0;
+          endKbSequence();
+          triggerSlotResetShortcut(slotIdx);
+          return;
+        }
+        const isCatDigit = /^[1-4]$/.test(e.key);
+        if(!isCatDigit && !isCatLetter){
+          kbBuffer = '';
+          clearTimeout(kbTimeout);
+          clearKbHighlights();
+          return;
+        }
+        e.preventDefault();
+        kbBuffer += (isCatLetter ? key : e.key);
+        restartKbTimeout();
+        highlightKbBuffer(rows, needsSlotDigit);
+        return;
+      }
+
+      // --- Stage 3: mission digit (toggle one mission) or "R" (reset the whole category) ---
+      if(kbBuffer.length === catStageLen){
+        e.preventDefault();
+        const slotIdx = needsSlotDigit ? (parseInt(kbBuffer[0],10) - 1) : 0;
+        const catDigit = catDigitFromChar(kbBuffer[slotStageLen]);
+
+        if(isR){
+          kbBuffer += 'r';
+          highlightKbBuffer(rows, needsSlotDigit);
+          endKbSequence();
+          triggerCategoryResetShortcut(slotIdx, catDigit);
+          return;
+        }
+        if(isDigit){
+          const missDigit = parseInt(e.key,10);
+          kbBuffer += e.key;
+          highlightKbBuffer(rows, needsSlotDigit);
+          endKbSequence();
+          triggerMissionShortcut(slotIdx, catDigit, missDigit);
+          return;
+        }
+        kbBuffer = '';
+        clearTimeout(kbTimeout);
+        clearKbHighlights();
+        return;
+      }
+    });
+  }
+
+  function triggerMissionShortcut(slotIdx, catDigit, missDigit){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    if(catDigit < 1 || catDigit > 4) return;
+    if(missDigit < 1 || missDigit > 4) return;
+    const row = rows[slotIdx];
+    const group = row.querySelectorAll('.mission-group')[catDigit-1];
+    if(!group) return;
+    const btn = group.querySelectorAll('.mission-btn')[missDigit-1];
+    if(!btn) return;
+    toggleMission(btn);
+    btn.classList.add('kb-toggled');
+    setTimeout(function(){ btn.classList.remove('kb-toggled'); }, 400);
+  }
+
+  function triggerCategoryResetShortcut(slotIdx, catDigit){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    if(catDigit < 1 || catDigit > 4) return;
+    const row = rows[slotIdx];
+    const group = row.querySelectorAll('.mission-group')[catDigit-1];
+    if(!group) return;
+    pushUndoSnapshot();
+    const td = group.closest('.col-mission-cat');
+    const cat = group.dataset.cat;
+    const btns = td.querySelectorAll('.mission-btn');
+    btns.forEach(function(b, idx){
+      b.classList.remove('bg-complete');
+      b.classList.add('bg-incomplete');
+      b.classList.add('kb-toggled');
+      applyMissionCompletionEffects(row.id, cat, idx, false, 'mainTable', { silent:true });
+    });
+    markDirty(row);
+    setTimeout(function(){
+      btns.forEach(function(b){ b.classList.remove('kb-toggled'); });
+    }, 400);
+  }
+
+  function triggerSlotResetShortcut(slotIdx){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    const row = rows[slotIdx];
+    pushUndoSnapshot();
+    row.querySelectorAll('.mission-group').forEach(function(group){
+      const cat = group.dataset.cat;
+      const btns = group.querySelectorAll('.mission-btn');
+      btns.forEach(function(b, idx){
+        b.classList.remove('bg-complete');
+        b.classList.add('bg-incomplete');
+        b.classList.add('kb-toggled');
+        applyMissionCompletionEffects(row.id, cat, idx, false, 'mainTable', { silent:true });
+      });
+      setTimeout(function(){
+        btns.forEach(function(b){ b.classList.remove('kb-toggled'); });
+      }, 400);
+    });
+    markDirty(row);
+    showToast('Slot ' + (slotIdx+1) + ' — all missions reset');
+  }
+
+  function triggerSlotSaveShortcut(slotIdx){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(slotIdx < 0 || slotIdx >= rows.length) return;
+    const row = rows[slotIdx];
+    const btn = row.querySelector('.save-btn');
+    if(!btn) return;
+    if(row.dataset.dirty !== 'true'){
+      showToast('Slot ' + (slotIdx+1) + ' — nothing to save');
+      return;
+    }
+    commitSlot(btn);
+    showToast('Slot ' + (slotIdx+1) + ' saved');
+  }
+
+  /* ---------- global bindings & init ---------- */
+  function toggleSettings(){
+    document.getElementById('settings-drawer').classList.toggle('open');
+    document.getElementById('settings-overlay').classList.toggle('active');
+    if(document.getElementById('settings-drawer').classList.contains('open')) renderSlotStyleSettings();
+  }
+
+  function toggleShortcuts(){
+    document.getElementById('shortcuts-modal').classList.toggle('open');
+    document.getElementById('shortcuts-overlay').classList.toggle('active');
+  }
+
+  function toggleImportExportMenu(e){
+    if(e) e.stopPropagation();
+    document.getElementById('import-export-menu').classList.toggle('open');
+  }
+
+  function closeImportExportMenu(){
+    document.getElementById('import-export-menu').classList.remove('open');
+  }
+
+  function bindGlobalHandlers(){
+    document.getElementById('btn-add-slot').addEventListener('click', function(){ pushUndoSnapshot(); addSlot(); });
+    document.getElementById('btn-save-all').addEventListener('click', saveAll);
+    document.getElementById('btn-undo').addEventListener('click', undo);
+    document.getElementById('btn-redo').addEventListener('click', redo);
+    document.getElementById('btn-export').addEventListener('click', function(){ closeImportExportMenu(); exportToText(); });
+    document.getElementById('btn-export-data').addEventListener('click', function(){ closeImportExportMenu(); exportData(); });
+    document.getElementById('btn-import-data').addEventListener('click', function(){ closeImportExportMenu(); triggerImportData(); });
+    document.getElementById('btn-import-report').addEventListener('click', function(){ closeImportExportMenu(); triggerImportReport(); });
+    document.getElementById('import-file-input').addEventListener('change', handleImportFile);
+    document.getElementById('btn-import-export').addEventListener('click', toggleImportExportMenu);
+    document.addEventListener('click', function(e){
+      const wrap = document.getElementById('btn-import-export').closest('.dropdown-wrap');
+      if(wrap && !wrap.contains(e.target)) closeImportExportMenu();
+    });
+    document.getElementById('import-report-overlay').addEventListener('click', closeImportReportModal);
+    document.getElementById('btn-close-import-report').addEventListener('click', closeImportReportModal);
+    document.getElementById('btn-cancel-import-report').addEventListener('click', closeImportReportModal);
+    document.getElementById('btn-confirm-import-report').addEventListener('click', confirmImportReport);
+    document.getElementById('btn-settings').addEventListener('click', toggleSettings);
+    document.getElementById('settings-overlay').addEventListener('click', toggleSettings);
+    document.getElementById('btn-close-settings').addEventListener('click', toggleSettings);
+    document.getElementById('btn-restore-style').addEventListener('click', restoreStyleSettings);
+    document.getElementById('btn-shortcuts').addEventListener('click', toggleShortcuts);
+    document.getElementById('shortcuts-overlay').addEventListener('click', toggleShortcuts);
+    document.getElementById('btn-close-shortcuts').addEventListener('click', toggleShortcuts);
+
+    window.addEventListener('beforeunload', function(e){
+      if(document.querySelector('#table-body tr.dirty')){
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    });
+
+    bindKeyboardShortcuts();
+    setupColorPickerDrag();
+
+    // Ctrl/Cmd+scroll should never trigger the browser's page-zoom gesture.
+    // Individual number fields already call preventDefault() in their own wheel
+    // handlers to edit their value; this just stops the zoom everywhere else too.
+    window.addEventListener('wheel', function(e){
+      if(e.ctrlKey || e.metaKey) e.preventDefault();
+    }, { passive:false });
+  }
+
+  function init(){
+    loadStyle();
+    loadAppState();
+    loadMissionState();
+    if(appState.slots.length === 0){
+      addSlot();
+    } else {
+      appState.slots.slice().forEach(function(s){ addSlot(s); });
+    }
+    renumber();
+    recalcGlobalFooter();
+    renderSlotStyleSettings();
+    bindGlobalHandlers();
+    renderPlayTable();
+    renderMissionTrackers();
+    setInterval(tickMissionTimers, 1000);
+  }
+
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
