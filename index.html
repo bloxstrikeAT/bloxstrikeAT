@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BloxStrike Account Tracker</title>
+<title>BloxStrike Account Tracker - v20</title>
 <link rel="icon" href="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" sizes="any">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -184,6 +184,7 @@
     color:inherit; font-family: var(--font-mono); font-size:12px; text-align:center; padding:2px 3px; border-radius:2px;
   }
   input[type=text]:focus{ outline:none; border-bottom-color: var(--brass); background: rgba(255,255,255,0.03); }
+  input[type=text].hover-typing{ border-bottom-color: var(--brass); background: rgba(255,255,255,0.03); }
   input[type=text].f-level, input[type=text].f-credits{ cursor: ns-resize; }
   .f-name{ text-align:left !important; font-family: var(--font-display); font-weight:600; }
   .f-time{ font-size:10px; color: var(--muted); font-family: var(--font-mono); }
@@ -529,7 +530,7 @@
 <header class="hud-panel top-bar">
   <div class="brand">
     <img class="brand-mark-icon" src="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" width="20" height="20" alt="" aria-hidden="true">
-    BloxStrike <span class="brand-sub">Account Tracker v19</span>
+    BloxStrike <span class="brand-sub">Account Tracker</span>
   </div>
   <div class="top-actions">
     <div class="top-actions" id="quick-play-row" style="margin:0;"></div>
@@ -656,6 +657,8 @@
       <tr><td><span class="kbd">Shift</span> <span class="kbd">.</span></td><td>Redo the last undone action.</td></tr>
       <tr><td><span class="kbd">Esc</span></td><td>Cancel an in-progress keyboard sequence, or close this panel.</td></tr>
       <tr><td>Scroll over any number field</td><td>±1 per notch, hold <span class="kbd">Shift</span> for ±5, hold <span class="kbd">Ctrl</span> for ±10.</td></tr>
+      <tr><td>Type over any number field</td><td>Click or just hover the mouse over it, then type. A plain number replaces the value; <span class="kbd">+</span> or <span class="kbd">-</span> then a number adds/subtracts from it. <span class="kbd">Enter</span> exits the field.</td></tr>
+      <tr><td><span class="kbd">1-9</span> <span class="kbd">+</span>/<span class="kbd">-</span> <span class="kbd">amount</span> <span class="kbd">Enter</span></td><td>Adjust a slot's credits from anywhere — no clicking or hovering required. Skip the slot digit if there's only one slot.</td></tr>
       <tr><td>Scroll over the mission timer</td><td>Edits whichever segment your cursor is over — days, hours, minutes, or seconds.</td></tr>
       <tr><td><span class="kbd">⋮⋮</span> handle</td><td>Drag a row to reorder slots.</td></tr>
       <tr><td><span class="kbd">↺</span> reset</td><td>Clears that stat/category back to zero.</td></tr>
@@ -933,10 +936,29 @@
       if(blur) blur.classList.remove('show');
     }, 2400);
   }
+  // ---------- Global numeric field behavior ----------
+  // Shared by every number field in the app (slot level, slot credits,
+  // mission current/target/reward): typing a leading + or - turns the rest
+  // of what you type into a delta applied on top of whatever the field held
+  // when you focused it (e.g. focus on 400, type "+100", exit -> 500).
+  // Plain digits still work exactly as before. Pressing Enter always exits
+  // the field the same way clicking away does.
   function sanitizeNumeric(el, opts){
     opts = opts || {};
-    let v = el.value.replace(/[^0-9]/g,'');
+    let v = el.value;
+    let sign = '';
+    if(v.charAt(0) === '+' || v.charAt(0) === '-'){
+      sign = v.charAt(0);
+      v = v.slice(1);
+    }
+    v = v.replace(/[^0-9]/g,'');
     if(v.length>1) v = v.replace(/^0+(?=\d)/,'');
+    if(sign){
+      // Hold off on resolving/clamping a relative delta until commit — we
+      // don't know the final value until we know the base it applies to.
+      el.value = sign + v;
+      return;
+    }
     if(v!==''){
       let num = parseInt(v,10);
       if(opts.max!=null && num>opts.max) num = opts.max;
@@ -944,6 +966,39 @@
       v = String(num);
     }
     el.value = v;
+  }
+
+  // Turns whatever's currently typed in a numeric field into a final
+  // absolute value: a plain number is clamped as usual, while a +N / -N
+  // delta is added to/subtracted from the base value captured on focus.
+  function resolveNumericValue(el, opts){
+    opts = opts || {};
+    const raw = el.value;
+    let num;
+    if(raw.charAt(0) === '+' || raw.charAt(0) === '-'){
+      let base = parseInt(el.dataset.baseValue, 10);
+      if(isNaN(base)) base = opts.min != null ? opts.min : 0;
+      const delta = parseInt(raw, 10) || 0;
+      num = base + delta;
+    } else {
+      num = parseInt(raw, 10);
+      if(isNaN(num)) num = opts.fallback != null ? opts.fallback : (opts.min != null ? opts.min : 0);
+    }
+    if(opts.max!=null) num = Math.min(opts.max, num);
+    if(opts.min!=null) num = Math.max(opts.min, num);
+    return num;
+  }
+
+  // Wires the shared Enter-to-exit behavior onto a numeric input. Base-value
+  // tracking (for +/- deltas) is wired separately since some fields
+  // (mission current/target/reward) are delegated rather than bound directly.
+  function attachNumericExitOnEnter(input){
+    input.addEventListener('keydown', function(e){
+      if(e.key === 'Enter'){
+        e.preventDefault();
+        input.blur();
+      }
+    });
   }
 
   /* ---------- persistence ---------- */
@@ -1267,6 +1322,7 @@
       if(min != null) val = Math.max(min, val);
       if(max != null) val = Math.min(max, val);
       input.value = String(val);
+      input.dataset.baseValue = val;
       input.dispatchEvent(new Event('input', { bubbles:true }));
     }, { passive:false });
   }
@@ -1298,34 +1354,65 @@
     }, { passive:false });
   }
 
+  // Same idea as attachMissionWheelDelegate: the mission current/target/reward
+  // inputs get torn down and rebuilt (via innerHTML) every time the tab or
+  // timer changes, so their numeric behavior has to be delegated from the
+  // stable .mc-missions container rather than bound per-input.
+  function isMissionNumericField(el){
+    return !!(el && el.classList && (el.classList.contains('mc-m-reward') || el.classList.contains('mc-m-current') || el.classList.contains('mc-m-target')));
+  }
+  function missionFieldOpts(el){
+    if(el.classList.contains('mc-m-target')) return {min:1};
+    return {min:0};
+  }
+  function attachMissionNumericDelegate(missionsEl){
+    missionsEl.addEventListener('focusin', function(e){
+      if(!isMissionNumericField(e.target)) return;
+      e.target.dataset.baseValue = parseInt(e.target.value, 10) || 0;
+      e.target.select();
+    });
+    missionsEl.addEventListener('input', function(e){
+      if(!isMissionNumericField(e.target)) return;
+      sanitizeNumeric(e.target, missionFieldOpts(e.target));
+    });
+    missionsEl.addEventListener('keydown', function(e){
+      if(!isMissionNumericField(e.target)) return;
+      if(e.key === 'Enter'){ e.preventDefault(); e.target.blur(); }
+    });
+  }
+
   function attachRowEvents(tr){
     const levelInput = tr.querySelector('.f-level');
     const creditsInput = tr.querySelector('.f-credits');
     const nameInput = tr.querySelector('.f-name');
 
-    levelInput.addEventListener('focus', function(){ beginFieldEdit(levelInput); });
+    levelInput.addEventListener('focus', function(){ beginFieldEdit(levelInput); levelInput.dataset.baseValue = parseInt(levelInput.value, 10) || 1; levelInput.select(); });
     levelInput.addEventListener('input', function(){
       sanitizeNumeric(levelInput, {min:1, max:40});
       updateRankLabel(tr);
       markDirty(tr); recalcRow(tr); recalcGlobalFooter();
     });
     levelInput.addEventListener('blur', function(){
-      if(levelInput.value === '') levelInput.value = '1';
+      levelInput.value = String(resolveNumericValue(levelInput, {min:1, max:40, fallback:1}));
+      levelInput.dataset.baseValue = levelInput.value;
       updateRankLabel(tr);
       recalcRow(tr); recalcGlobalFooter();
       commitFieldEdit(levelInput);
     });
+    attachNumericExitOnEnter(levelInput);
 
-    creditsInput.addEventListener('focus', function(){ beginFieldEdit(creditsInput); });
+    creditsInput.addEventListener('focus', function(){ beginFieldEdit(creditsInput); creditsInput.dataset.baseValue = parseInt(creditsInput.value, 10) || 0; creditsInput.select(); });
     creditsInput.addEventListener('input', function(){
       sanitizeNumeric(creditsInput, {min:0});
       markDirty(tr); recalcGlobalFooter();
     });
     creditsInput.addEventListener('blur', function(){
-      if(creditsInput.value === '') creditsInput.value = '0';
+      creditsInput.value = String(resolveNumericValue(creditsInput, {min:0, fallback:0}));
+      creditsInput.dataset.baseValue = creditsInput.value;
       recalcGlobalFooter();
       commitFieldEdit(creditsInput);
     });
+    attachNumericExitOnEnter(creditsInput);
 
     attachWheelStep(levelInput, 1, 40);
     attachWheelStep(creditsInput, 0, null);
@@ -1976,6 +2063,7 @@
     const slotId = card.dataset.slot;
 
     attachMissionWheelDelegate(card.querySelector('.mc-missions'));
+    attachMissionNumericDelegate(card.querySelector('.mc-missions'));
     bindMissionNameAutocomplete(card, slotId);
 
     card.querySelectorAll('.mc-star-btn').forEach(function(star){
@@ -2073,8 +2161,8 @@
       if(!m) return;
 
       if(e.target.classList.contains('mc-m-reward')){
-        let v = parseInt(e.target.value, 10); if(isNaN(v) || v < 0) v = 0;
-        m.reward = v; e.target.value = v;
+        let v = resolveNumericValue(e.target, {min:0, fallback:0});
+        m.reward = v; e.target.value = v; e.target.dataset.baseValue = v;
         persistMissionState();
       } else if(e.target.classList.contains('mc-m-name')){
         m.name = e.target.value.trim();
@@ -2093,14 +2181,14 @@
         }
         persistMissionState();
       } else if(e.target.classList.contains('mc-m-current')){
-        let v = parseInt(e.target.value, 10); if(isNaN(v) || v < 0) v = 0;
+        let v = resolveNumericValue(e.target, {min:0, fallback:0});
         if(m.target > 0 && v > m.target) v = m.target;
-        m.current = v; e.target.value = v;
+        m.current = v; e.target.value = v; e.target.dataset.baseValue = v;
         const complete = m.target > 0 && v >= m.target;
         applyMissionCompletionEffects(slotId, cat, idx, complete, 'card');
       } else if(e.target.classList.contains('mc-m-target')){
-        let v = parseInt(e.target.value, 10); if(isNaN(v) || v < 1) v = 1;
-        m.target = v; e.target.value = v;
+        let v = resolveNumericValue(e.target, {min:1, fallback:1});
+        m.target = v; e.target.value = v; e.target.dataset.baseValue = v;
         if(m.current > v){
           m.current = v;
           row.querySelector('.mc-m-current').value = v;
@@ -2755,7 +2843,173 @@
     return (idx != null) ? idx + 1 : null;
   }
 
-  // --- "M" mission-table-edit sequence: M -> [slot digit] -> category (h/d/w/m or 1-4) -> mission digit ---
+  // ---------- Hover-to-type: type +100 / -100 / a plain number while the
+  // mouse just rests over any numeric field, no click needed. Mirrors the
+  // click-and-type relative-delta behavior, just triggered by hover instead
+  // of focus. ---------
+  let hoverNumericField = null;
+  let hoverTypeBuffer = '';
+  let hoverBaseValue = 0;
+  let hoverTypeTimeout = null;
+
+  function isAnyNumericField(el){
+    return !!(el && el.classList && (el.classList.contains('f-level') || el.classList.contains('f-credits') ||
+      el.classList.contains('mc-m-current') || el.classList.contains('mc-m-target') || el.classList.contains('mc-m-reward')));
+  }
+
+  function numericFieldOpts(el){
+    if(el.classList.contains('f-level')) return {min:1, max:40};
+    if(el.classList.contains('f-credits')) return {min:0};
+    if(el.classList.contains('mc-m-target')) return {min:1};
+    return {min:0}; // mc-m-current, mc-m-reward
+  }
+
+  function restartHoverTypeTimeout(){
+    clearTimeout(hoverTypeTimeout);
+    hoverTypeTimeout = setTimeout(function(){ commitHoverType(); }, 1500);
+  }
+
+  function beginHoverTyping(){
+    if(!hoverNumericField) return;
+    hoverBaseValue = parseInt(hoverNumericField.value, 10) || 0;
+    if(hoverNumericField.classList.contains('f-level') || hoverNumericField.classList.contains('f-credits')){
+      beginFieldEdit(hoverNumericField);
+    }
+  }
+
+  function updateHoverFieldDisplay(){
+    if(!hoverNumericField) return;
+    hoverNumericField.value = hoverTypeBuffer;
+    hoverNumericField.classList.add('hover-typing');
+  }
+
+  function commitHoverType(){
+    clearTimeout(hoverTypeTimeout);
+    const el = hoverNumericField;
+    if(!el || hoverTypeBuffer === ''){
+      if(el) el.classList.remove('hover-typing');
+      hoverTypeBuffer = '';
+      return;
+    }
+    const opts = numericFieldOpts(el);
+    let num;
+    if(hoverTypeBuffer.charAt(0) === '+' || hoverTypeBuffer.charAt(0) === '-'){
+      num = hoverBaseValue + (parseInt(hoverTypeBuffer, 10) || 0);
+    } else {
+      num = parseInt(hoverTypeBuffer, 10);
+      if(isNaN(num)) num = hoverBaseValue;
+    }
+    if(opts.max != null) num = Math.min(opts.max, num);
+    if(opts.min != null) num = Math.max(opts.min, num);
+    el.value = String(num);
+    el.dataset.baseValue = num;
+    el.classList.remove('hover-typing');
+    hoverTypeBuffer = '';
+
+    if(el.classList.contains('f-level') || el.classList.contains('f-credits')){
+      const tr = el.closest('tr');
+      if(el.classList.contains('f-level') && tr) updateRankLabel(tr);
+      if(tr){ markDirty(tr); recalcRow(tr); recalcGlobalFooter(); }
+      commitFieldEdit(el);
+    } else {
+      el.dispatchEvent(new Event('change', { bubbles:true }));
+    }
+  }
+
+  function cancelHoverType(){
+    clearTimeout(hoverTypeTimeout);
+    if(hoverNumericField && hoverTypeBuffer !== ''){
+      hoverNumericField.value = String(hoverBaseValue);
+      hoverNumericField.classList.remove('hover-typing');
+    }
+    hoverTypeBuffer = '';
+  }
+
+  function bindHoverTypeTracking(){
+    document.addEventListener('mouseover', function(e){
+      if(!isAnyNumericField(e.target)) return;
+      hoverNumericField = e.target;
+    });
+    document.addEventListener('mouseout', function(e){
+      if(e.target !== hoverNumericField) return;
+      if(hoverTypeBuffer !== '') commitHoverType();
+      hoverNumericField = null;
+    });
+  }
+
+  // ---------- "Slot number + / - amount" shortcut: adjusts that slot's
+  // credits directly from the keyboard, no clicking or hovering required.
+  // e.g. with 3 slots: "2" then "+" then "150" then Enter adds 150 credits
+  // to slot 2. With only one slot, skip the slot digit — just "+150".
+  let caMode = false;
+  let caSlotIdx = -1;
+  let caSign = '+';
+  let caDigits = '';
+  let caTimeout = null;
+  let caHighlighted = [];
+
+  function clearCaHighlights(){
+    caHighlighted.forEach(function(el){ el.classList.remove('kb-flash'); });
+    caHighlighted = [];
+    document.getElementById('kb-indicator').classList.remove('active');
+  }
+
+  function restartCaTimeout(){
+    clearTimeout(caTimeout);
+    caTimeout = setTimeout(function(){ cancelCreditAdjust(); }, 1500);
+  }
+
+  function startCreditAdjust(slotIdx, sign){
+    caMode = true;
+    caSlotIdx = slotIdx;
+    caSign = sign;
+    caDigits = '';
+    restartCaTimeout();
+    highlightCreditAdjust();
+  }
+
+  function highlightCreditAdjust(){
+    clearCaHighlights();
+    const rows = document.querySelectorAll('#table-body tr');
+    const row = rows[caSlotIdx];
+    const indicator = document.getElementById('kb-indicator');
+    indicator.classList.add('active');
+    if(row){
+      row.classList.add('kb-flash'); caHighlighted.push(row);
+      const creditsInput = row.querySelector('.f-credits');
+      if(creditsInput){ creditsInput.classList.add('kb-flash'); caHighlighted.push(creditsInput); }
+    }
+    indicator.textContent = 'CREDITS: Slot ' + (caSlotIdx+1) + ' ' + caSign + caDigits;
+  }
+
+  function cancelCreditAdjust(){
+    caMode = false;
+    caSlotIdx = -1;
+    caDigits = '';
+    caSign = '+';
+    clearTimeout(caTimeout);
+    clearCaHighlights();
+  }
+
+  function commitCreditAdjust(){
+    const rows = document.querySelectorAll('#table-body tr');
+    if(caSlotIdx < 0 || caSlotIdx >= rows.length || caDigits === ''){ cancelCreditAdjust(); return; }
+    const row = rows[caSlotIdx];
+    const input = row.querySelector('.f-credits');
+    if(!input){ cancelCreditAdjust(); return; }
+    pushUndoSnapshot();
+    const delta = parseInt(caSign + caDigits, 10) || 0;
+    const base = parseInt(input.value, 10) || 0;
+    const v = Math.max(0, base + delta);
+    input.value = String(v);
+    input.dataset.baseValue = v;
+    markDirty(row);
+    recalcGlobalFooter();
+    showToast((delta >= 0 ? '+' : '') + delta + ' credits — Slot ' + (caSlotIdx+1));
+    cancelCreditAdjust();
+  }
+
+
   // A separate buffer/timeout from the toggle sequence above so the two
   // never interfere with each other's state.
   let mtBuffer = '';
@@ -2847,10 +3101,69 @@
         mtBuffer = '';
         clearTimeout(mtTimeout);
         clearMtHighlights();
+        cancelCreditAdjust();
+        cancelHoverType();
         if(document.getElementById('shortcuts-modal').classList.contains('open')) toggleShortcuts();
         closeImportExportMenu();
         if(document.getElementById('import-report-modal').classList.contains('open')) closeImportReportModal();
         return;
+      }
+
+      // Hover-to-type: the mouse resting on a numeric field takes priority
+      // over every other shortcut below — digits / +/- / Backspace / Enter
+      // feed straight into whichever field is under the cursor.
+      if(hoverNumericField){
+        const startingSign = hoverTypeBuffer === '' && (e.key === '+' || e.key === '-');
+        const isHoverDigit = /^[0-9]$/.test(e.key);
+        if(startingSign || isHoverDigit){
+          e.preventDefault();
+          if(hoverTypeBuffer === '') beginHoverTyping();
+          hoverTypeBuffer += e.key;
+          updateHoverFieldDisplay();
+          restartHoverTypeTimeout();
+          return;
+        }
+        if(e.key === 'Backspace' && hoverTypeBuffer !== ''){
+          e.preventDefault();
+          hoverTypeBuffer = hoverTypeBuffer.slice(0, -1);
+          updateHoverFieldDisplay();
+          restartHoverTypeTimeout();
+          return;
+        }
+        if(e.key === 'Enter' && hoverTypeBuffer !== ''){
+          e.preventDefault();
+          commitHoverType();
+          return;
+        }
+        if(hoverTypeBuffer !== ''){
+          commitHoverType();
+        }
+      }
+
+      // "Slot number" + / - amount": collecting the amount digits once a
+      // credit adjustment has been started (see the +/- trigger below).
+      if(caMode){
+        if(/^[0-9]$/.test(e.key)){
+          e.preventDefault();
+          caDigits += e.key;
+          restartCaTimeout();
+          highlightCreditAdjust();
+          return;
+        }
+        if(e.key === 'Backspace'){
+          e.preventDefault();
+          caDigits = caDigits.slice(0, -1);
+          restartCaTimeout();
+          highlightCreditAdjust();
+          return;
+        }
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          commitCreditAdjust();
+          return;
+        }
+        // Any other key cancels the in-progress credit adjustment.
+        cancelCreditAdjust();
       }
 
       // Shift+, (<) undo, Shift+. (>) redo
@@ -2940,7 +3253,8 @@
         return;
       }
 
-      if(!isDigit && !isCatLetter && !isR && !isS) return;
+      const isPlusMinus = e.key === '+' || e.key === '-';
+      if(!isDigit && !isCatLetter && !isR && !isS && !isPlusMinus) return;
 
       const slotStageLen = needsSlotDigit ? 1 : 0;
       const catStageLen = slotStageLen + 1;
@@ -2955,7 +3269,7 @@
         return;
       }
 
-      // --- Stage 2: collecting the category — digit 1-4 OR letter h/d/w/m — "slot + S" to save just that slot, or "slot + R" to reset the whole slot ---
+      // --- Stage 2: collecting the category — digit 1-4 OR letter h/d/w/m — "slot + S" to save just that slot, "slot + R" to reset the whole slot, or "slot + +/-" to adjust that slot's credits ---
       if(kbBuffer.length === slotStageLen){
         if(isS && needsSlotDigit){
           e.preventDefault();
@@ -2969,6 +3283,13 @@
           const slotIdx = needsSlotDigit ? (parseInt(kbBuffer[0],10) - 1) : 0;
           endKbSequence();
           triggerSlotResetShortcut(slotIdx);
+          return;
+        }
+        if(isPlusMinus){
+          e.preventDefault();
+          const slotIdx = needsSlotDigit ? (parseInt(kbBuffer[0],10) - 1) : 0;
+          endKbSequence();
+          startCreditAdjust(slotIdx, e.key);
           return;
         }
         const isCatDigit = /^[1-4]$/.test(e.key);
@@ -3184,6 +3505,7 @@
     });
 
     bindKeyboardShortcuts();
+    bindHoverTypeTracking();
     setupColorPickerDrag();
 
     // Ctrl/Cmd+scroll should never trigger the browser's page-zoom gesture.
