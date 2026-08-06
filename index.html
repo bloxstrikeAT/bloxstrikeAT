@@ -157,6 +157,61 @@
   .layout{ display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; }
   .main-panel{ flex:1 1 0; min-width:0; }
 
+  /* ---------- Notepad (top-bar toggle popover) ---------- */
+  .notepad-panel{
+    position:absolute; top:calc(100% + 6px); right:0; width:320px; max-width:92vw;
+    background: var(--panel); border:1px solid var(--border-strong); border-radius:3px;
+    padding:10px; z-index:120; display:none;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.5);
+  }
+  .notepad-panel.open{ display:block; }
+  .notepad-panel .panel-head{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:8px; }
+  .notepad-status{ font-size:9px; letter-spacing:0.4px; color: var(--muted); font-weight:600; text-transform:uppercase; opacity:0; transition:opacity .3s ease; white-space:nowrap; }
+  .notepad-status.show{ opacity:1; }
+  .notepad-status.saving{ color: var(--muted); }
+  .notepad-status.saved{ color: var(--complete); }
+  #notepad-textarea{
+    width:100%; box-sizing:border-box; resize:vertical;
+    min-height:220px; height:220px;
+    background: var(--panel-alt); border:1px solid var(--border-strong); color: var(--text);
+    font-family: var(--font-mono); font-size:11.5px; line-height:1.5;
+    padding:9px; border-radius:2px;
+  }
+  #notepad-textarea:focus{ outline:none; border-color: var(--brass); }
+  #notepad-textarea::placeholder{ color: var(--muted); }
+  @media (max-width: 720px){
+    .notepad-panel{ width:280px; }
+  }
+
+  /* ---------- Inventory ---------- */
+  .inventory-tracker-container{ display:grid; grid-template-columns:repeat(2, 1fr); gap:9px; margin-top:10px; align-items:start; }
+  @media (max-width: 720px){ .inventory-tracker-container{ grid-template-columns:1fr; } }
+  .inventory-card{
+    position:relative; background: var(--panel); border:1px solid var(--border); border-radius: var(--radius);
+    padding:8px 10px; min-width:0; display:flex; flex-direction:column; gap:6px;
+  }
+  .inventory-card::before, .inventory-card::after{ content:''; position:absolute; width:10px; height:10px; pointer-events:none; opacity:0.6; }
+  .inventory-card::before{ top:-1px; left:-1px; border-top:2px solid var(--brass); border-left:2px solid var(--brass); }
+  .inventory-card::after{ bottom:-1px; right:-1px; border-bottom:2px solid var(--brass); border-right:2px solid var(--brass); }
+  .inv-clear-btn{ margin-left:auto; }
+  .inv-slot{
+    flex:1 1 auto; min-height:180px; background: var(--panel-alt); border:1px dashed var(--border-strong);
+    border-radius:2px; display:flex; align-items:center; justify-content:center; overflow:hidden;
+    cursor:pointer; position:relative; text-align:center;
+  }
+  .inv-slot:focus{ outline:none; border-color: var(--brass); }
+  .inv-slot:focus-visible{ outline: 2px solid var(--brass); outline-offset: 1px; }
+  .inv-slot.inv-drag-over{ border-color: var(--brass); background: rgba(201,162,39,0.08); }
+  .inv-slot .inv-img{ width:100%; height:100%; object-fit:contain; object-position:center; display:block; }
+  .inv-placeholder{ display:flex; flex-direction:column; align-items:center; gap:6px; color: var(--muted); font-size:11px; padding:12px; pointer-events:none; }
+  .inv-placeholder-icon{ font-size:22px; opacity:0.7; }
+  .inv-placeholder-sub{ font-size:9.5px; opacity:0.8; }
+
+  /* ---------- Mission screenshot mode (replaces typed mission rows) ---------- */
+  .mc-screenshot-wrap{ display:flex; flex-direction:column; gap:6px; }
+  .mc-screenshot-slot{ min-height:220px; }
+  .mc-screenshot-clear{ align-self:flex-end; }
+
 
 
   /* ---------- Table ---------- */
@@ -473,6 +528,26 @@
   .swatch-row{ display:flex; align-items:center; gap:6px; }
   .swatch-row .mini-reset{ margin-left:0; }
 
+  /* ---------- Toggle switch (panel visibility / mission display) ---------- */
+  .toggle-switch{ position:relative; display:inline-block; width:34px; height:19px; flex-shrink:0; }
+  .toggle-switch input{ opacity:0; width:0; height:0; position:absolute; }
+  .toggle-switch .toggle-track{
+    position:absolute; inset:0; background: var(--panel-alt); border:1px solid var(--border-strong);
+    border-radius:20px; cursor:pointer; transition: background .15s ease, border-color .15s ease;
+  }
+  .toggle-switch .toggle-track::before{
+    content:''; position:absolute; width:13px; height:13px; left:2px; top:2px;
+    background: var(--muted); border-radius:50%; transition: transform .15s ease, background .15s ease;
+  }
+  .toggle-switch input:checked + .toggle-track{ background: color-mix(in srgb, var(--brass) 20%, transparent); border-color: var(--brass); }
+  .toggle-switch input:checked + .toggle-track::before{ transform: translateX(15px); background: var(--brass); }
+  .toggle-switch input:focus-visible + .toggle-track{ outline: 2px solid var(--brass); outline-offset: 1px; }
+  .panel-hidden{ display:none !important; }
+
+  .toggle-group{ background: var(--panel-alt); border:1px solid var(--border); border-radius:2px; padding:9px 10px 2px; }
+  .toggle-group .setting-group{ margin-bottom:9px; }
+  .toggle-group-divider{ height:1px; background: var(--border-strong); margin:0 0 10px; }
+
   .slot-style-block{ background: var(--panel-alt); border:1px solid var(--border); border-radius:2px; padding:8px; margin-bottom:8px; }
   .slot-style-block h5{ margin:0 0 6px; font-size:9px; color: var(--muted); }
   .style-row{ display:flex; gap:12px; }
@@ -530,7 +605,7 @@
 <header class="hud-panel top-bar">
   <div class="brand">
     <img class="brand-mark-icon" src="https://bloxstrikeat.github.io/bloxstrikeAT/favicon.ico" width="20" height="20" alt="" aria-hidden="true">
-    BloxStrike <span class="brand-sub">Account Tracker - v20</span>
+    BloxStrike <span class="brand-sub">Account Tracker v22</span>
   </div>
   <div class="top-actions">
     <div class="top-actions" id="quick-play-row" style="margin:0;"></div>
@@ -548,6 +623,13 @@
       </div>
     </div>
     <input type="file" id="import-file-input" accept="application/json,.json" style="display:none">
+    <div class="dropdown-wrap">
+      <button type="button" class="icon-btn" id="btn-notepad" title="Notepad" aria-label="Toggle notepad">📝</button>
+      <div class="notepad-panel" id="notepad-panel">
+        <div class="panel-head">Notepad <span class="notepad-status" id="notepad-status">Saved</span></div>
+        <textarea id="notepad-textarea" placeholder="Jot down anything here — trades, reminders, todo list… it saves automatically as you type."></textarea>
+      </div>
+    </div>
     <button type="button" class="icon-btn" id="btn-undo" title="Undo (Shift+,)" aria-label="Undo" disabled>↶</button>
     <button type="button" class="icon-btn" id="btn-redo" title="Redo (Shift+.)" aria-label="Redo" disabled>↷</button>
     <button type="button" class="icon-btn" id="btn-shortcuts" title="Keyboard shortcuts" aria-label="Shortcuts">⌨</button>
@@ -555,7 +637,7 @@
   </div>
 </header>
 
-<div class="layout">
+<div class="layout" id="slot-table-section">
   <section class="hud-panel main-panel">
     <div class="table-scroll">
       <table id="tracker-table">
@@ -592,11 +674,21 @@
   </section>
 </div>
 
-<div class="mc-note-wrap">
-  <div class="panel-head">Mission Tracker</div>
-  <div class="mc-global-note">Note: the credit values shown are just defaults — each account can have different amounts per mission. Always double check the actual credit reward on each mission before relying on it.</div>
+<div id="mission-section">
+  <div class="mc-note-wrap">
+    <div class="panel-head">Mission Tracker</div>
+    <div class="mc-global-note">Note: the credit values shown are just defaults — each account can have different amounts per mission. Always double check the actual credit reward on each mission before relying on it.</div>
+  </div>
+  <div id="mission-tracker-container" class="mission-tracker-container"></div>
 </div>
-<div id="mission-tracker-container" class="mission-tracker-container"></div>
+
+<div id="inventory-section">
+  <div class="mc-note-wrap">
+    <div class="panel-head">Inventory</div>
+    <div class="mc-global-note">Click a slot then paste a screenshot (Ctrl+V), or click to browse a file — each inventory slot matches the size of its mission card, and the full screenshot is always shown without cropping.</div>
+  </div>
+  <div id="inventory-tracker-container" class="inventory-tracker-container"></div>
+</div>
 
 <div class="footer-sig">made by @svhxll with Claude</div>
 
@@ -608,6 +700,16 @@
     <h3>Appearance</h3>
     <span class="close-btn" id="btn-close-settings" title="Close" aria-label="Close settings">✕</span>
   </div>
+
+  <h4>Interface</h4>
+  <div class="toggle-group">
+    <div class="setting-group"><label>Slot Table</label><label class="toggle-switch"><input type="checkbox" id="pref-show-slot-table" checked><span class="toggle-track"></span></label></div>
+    <div class="setting-group"><label>Mission Tracker</label><label class="toggle-switch"><input type="checkbox" id="pref-show-mission-tracker" checked><span class="toggle-track"></span></label></div>
+    <div class="setting-group"><label>Inventory</label><label class="toggle-switch"><input type="checkbox" id="pref-show-inventory" checked><span class="toggle-track"></span></label></div>
+    <div class="toggle-group-divider"></div>
+    <div class="setting-group"><label>Show missions as screenshots</label><label class="toggle-switch"><input type="checkbox" id="pref-mission-screenshot-mode"><span class="toggle-track"></span></label></div>
+  </div>
+  <hr>
 
   <div class="setting-group"><label>Background</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-bg" data-key="bg" data-css="--bg" style="background:#0A0B0D" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
   <div class="setting-group"><label>Panel</label><div class="swatch-row"><button type="button" class="color-swatch" id="cp-panel" data-key="panel" data-css="--panel" style="background:#131417" onclick="openGlobalColorPicker(this)"></button><span class="mini-reset" title="Reset to default" onclick="resetGlobalColorFromBtn(this)">↺</span></div></div>
@@ -835,6 +937,13 @@
   let missionState = {};
   const STORAGE_KEY = 'bloxstrike_tracker_v1';
   const STYLE_KEY = 'bloxstrike_style_v1';
+  const NOTEPAD_KEY = 'bloxstrike_notepad_v1';
+  const INVENTORY_STORAGE_KEY = 'bloxstrike_inventory_v1';
+  let inventoryState = {};
+  const MISSION_SCREENSHOT_KEY = 'bloxstrike_mission_screenshots_v1';
+  let missionScreenshots = {};
+  const UI_PREFS_KEY = 'bloxstrike_uiprefs_v1';
+  let uiPrefs = { hideSlotTable:false, hideMissionTracker:false, hideInventory:false, missionScreenshotMode:false };
 
   let appState = { slots: [] };
   let slotCounter = 0;
@@ -1418,7 +1527,7 @@
     attachWheelStep(creditsInput, 0, null);
 
     nameInput.addEventListener('focus', function(){ beginFieldEdit(nameInput); });
-    nameInput.addEventListener('input', function(){ markDirty(tr); renderPlayTable(); const num = tr.querySelector('.slot-num').textContent; updateMissionCardName(tr.id, nameInput.value.trim() || ('Slot ' + num)); });
+    nameInput.addEventListener('input', function(){ markDirty(tr); renderPlayTable(); const num = tr.querySelector('.slot-num').textContent; const nm = nameInput.value.trim() || ('Slot ' + num); updateMissionCardName(tr.id, nm); updateInventoryCardName(tr.id, nm); });
     nameInput.addEventListener('blur', function(){ commitFieldEdit(nameInput); });
 
     attachDragEvents(tr);
@@ -1454,6 +1563,7 @@
     appState.slots = appState.slots.filter(function(s){ return s.id !== id; });
     if(styleData.slots[id]) delete styleData.slots[id];
     if(missionState[id]){ delete missionState[id]; persistMissionState(); }
+    if(inventoryState[id]){ delete inventoryState[id]; persistInventoryState(); }
     persistAppState();
     persistStyle();
     renumber();
@@ -1480,6 +1590,7 @@
     });
     renderPlayTable();
     renderMissionTrackers();
+    renderInventoryTrackers();
     reconcileMissionLinks();
   }
 
@@ -1538,6 +1649,356 @@
       const raw = localStorage.getItem(MISSION_STORAGE_KEY);
       missionState = raw ? JSON.parse(raw) : {};
     } catch(e){ missionState = {}; }
+  }
+
+  /* ---------- Inventory (per-slot pasted screenshot) ---------- */
+  function persistInventoryState(){
+    try{
+      localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(inventoryState));
+    }catch(e){
+      showToast('Storage is full — could not save that screenshot');
+    }
+  }
+
+  function loadInventoryState(){
+    try{
+      const raw = localStorage.getItem(INVENTORY_STORAGE_KEY);
+      inventoryState = raw ? JSON.parse(raw) : {};
+    }catch(e){ inventoryState = {}; }
+  }
+
+  /* ---------- UI prefs: panel visibility & mission display mode ---------- */
+  function persistUiPrefs(){
+    try{ localStorage.setItem(UI_PREFS_KEY, JSON.stringify(uiPrefs)); }catch(e){ /* ignore */ }
+  }
+
+  function loadUiPrefs(){
+    try{
+      const raw = localStorage.getItem(UI_PREFS_KEY);
+      if(raw) uiPrefs = Object.assign(uiPrefs, JSON.parse(raw));
+    }catch(e){ /* ignore */ }
+  }
+
+  function applyPanelVisibility(){
+    const slotSection = document.getElementById('slot-table-section');
+    const missionSection = document.getElementById('mission-section');
+    const inventorySection = document.getElementById('inventory-section');
+    if(slotSection) slotSection.classList.toggle('panel-hidden', uiPrefs.hideSlotTable);
+    if(missionSection) missionSection.classList.toggle('panel-hidden', uiPrefs.hideMissionTracker);
+    if(inventorySection) inventorySection.classList.toggle('panel-hidden', uiPrefs.hideInventory);
+  }
+
+  function bindUiPrefControls(){
+    const slotToggle = document.getElementById('pref-show-slot-table');
+    const missionToggle = document.getElementById('pref-show-mission-tracker');
+    const inventoryToggle = document.getElementById('pref-show-inventory');
+    const screenshotToggle = document.getElementById('pref-mission-screenshot-mode');
+
+    if(slotToggle){
+      slotToggle.checked = !uiPrefs.hideSlotTable;
+      slotToggle.addEventListener('change', function(){
+        uiPrefs.hideSlotTable = !slotToggle.checked;
+        persistUiPrefs();
+        applyPanelVisibility();
+      });
+    }
+    if(missionToggle){
+      missionToggle.checked = !uiPrefs.hideMissionTracker;
+      missionToggle.addEventListener('change', function(){
+        uiPrefs.hideMissionTracker = !missionToggle.checked;
+        persistUiPrefs();
+        applyPanelVisibility();
+      });
+    }
+    if(inventoryToggle){
+      inventoryToggle.checked = !uiPrefs.hideInventory;
+      inventoryToggle.addEventListener('change', function(){
+        uiPrefs.hideInventory = !inventoryToggle.checked;
+        persistUiPrefs();
+        applyPanelVisibility();
+      });
+    }
+    if(screenshotToggle){
+      screenshotToggle.checked = uiPrefs.missionScreenshotMode;
+      screenshotToggle.addEventListener('change', function(){
+        uiPrefs.missionScreenshotMode = screenshotToggle.checked;
+        persistUiPrefs();
+        renderMissionTrackers();
+        showToast(uiPrefs.missionScreenshotMode ? 'Mission Tracker switched to screenshot mode' : 'Mission Tracker switched back to typed mode');
+      });
+    }
+  }
+
+  // Downscales/compresses a pasted or uploaded screenshot before storing it
+  // (raw phone screenshots can be several MB, which blows through localStorage's
+  // ~5-10MB quota fast across multiple slots). Shared by inventory slots and
+  // mission-screenshot mode.
+  function compressImageFile(file, onDone, onError){
+    if(!file || file.type.indexOf('image') !== 0){
+      showToast('That is not an image');
+      if(onError) onError();
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(e){
+      const img = new Image();
+      img.onload = function(){
+        const MAX_DIM = 1000;
+        let w = img.width, h = img.height;
+        if(w > MAX_DIM || h > MAX_DIM){
+          const scale = Math.min(MAX_DIM / w, MAX_DIM / h);
+          w = Math.max(1, Math.round(w * scale));
+          h = Math.max(1, Math.round(h * scale));
+        }
+        let dataUrl;
+        try{
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+        }catch(err){
+          dataUrl = e.target.result;
+        }
+        onDone(dataUrl);
+      };
+      img.onerror = function(){ showToast('Could not read that image'); if(onError) onError(); };
+      img.src = e.target.result;
+    };
+    reader.onerror = function(){ showToast('Could not read that file'); if(onError) onError(); };
+    reader.readAsDataURL(file);
+  }
+
+  function processInventoryImage(slotId, file){
+    compressImageFile(file, function(dataUrl){
+      inventoryState[slotId] = dataUrl;
+      persistInventoryState();
+      renderInventoryTrackers();
+      showToast('Inventory screenshot saved');
+    });
+  }
+
+  /* ---------- Mission screenshots (alternate display mode) ---------- */
+  function persistMissionScreenshots(){
+    try{
+      localStorage.setItem(MISSION_SCREENSHOT_KEY, JSON.stringify(missionScreenshots));
+    }catch(e){
+      showToast('Storage is full — could not save that screenshot');
+    }
+  }
+
+  function loadMissionScreenshots(){
+    try{
+      const raw = localStorage.getItem(MISSION_SCREENSHOT_KEY);
+      missionScreenshots = raw ? JSON.parse(raw) : {};
+    }catch(e){ missionScreenshots = {}; }
+  }
+
+  function missionScreenshotKey(slotId, cat){ return slotId + '_' + cat; }
+
+  function processMissionScreenshotImage(slotId, cat, file){
+    compressImageFile(file, function(dataUrl){
+      missionScreenshots[missionScreenshotKey(slotId, cat)] = dataUrl;
+      persistMissionScreenshots();
+      const card = getMissionCard(slotId);
+      if(card) renderMissionCatBody(card);
+      showToast(CAT_NAMES[cat] + ' missions screenshot saved');
+    });
+  }
+
+  function buildMissionScreenshotHtml(slotId, cat){
+    const img = missionScreenshots[missionScreenshotKey(slotId, cat)];
+    return '<div class="mc-screenshot-wrap">' +
+      '<div class="inv-slot mc-screenshot-slot" data-slot="' + slotId + '" data-cat="' + cat + '" tabindex="0" title="Click here, then paste (Ctrl+V) a screenshot of your ' + CAT_NAMES[cat] + ' missions — or click to browse a file">' +
+        (img
+          ? '<img class="inv-img" src="' + img + '" alt="' + CAT_NAMES[cat] + ' missions screenshot">'
+          : '<div class="inv-placeholder"><span class="inv-placeholder-icon">🖼</span><span>Click here, then paste<br>a screenshot (Ctrl+V)<br><span class="inv-placeholder-sub">or click to browse a file</span></span></div>') +
+      '</div>' +
+      '<input type="file" class="inv-file-input mc-screenshot-file" accept="image/*" style="display:none">' +
+      (img ? '<button type="button" class="mc-reset-missions-btn mc-screenshot-clear">Clear Screenshot</button>' : '') +
+    '</div>';
+  }
+
+  function bindMissionScreenshotArea(wrap, slotId, cat){
+    const slot = wrap.querySelector('.mc-screenshot-slot');
+    const fileInput = wrap.querySelector('.mc-screenshot-file');
+    const clearBtn = wrap.querySelector('.mc-screenshot-clear');
+    if(!slot) return;
+
+    slot.addEventListener('paste', function(e){
+      const items = (e.clipboardData && e.clipboardData.items) || [];
+      for(let i=0;i<items.length;i++){
+        if(items[i].type.indexOf('image') === 0){
+          const file = items[i].getAsFile();
+          if(file){ e.preventDefault(); processMissionScreenshotImage(slotId, cat, file); }
+          break;
+        }
+      }
+    });
+
+    slot.addEventListener('click', function(){
+      if(!missionScreenshots[missionScreenshotKey(slotId, cat)]) fileInput.click();
+    });
+
+    slot.addEventListener('dragover', function(e){ e.preventDefault(); slot.classList.add('inv-drag-over'); });
+    slot.addEventListener('dragleave', function(){ slot.classList.remove('inv-drag-over'); });
+    slot.addEventListener('drop', function(e){
+      e.preventDefault();
+      slot.classList.remove('inv-drag-over');
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) processMissionScreenshotImage(slotId, cat, file);
+    });
+
+    fileInput.addEventListener('change', function(){
+      const file = fileInput.files && fileInput.files[0];
+      if(file) processMissionScreenshotImage(slotId, cat, file);
+      fileInput.value = '';
+    });
+
+    if(clearBtn){
+      clearBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        delete missionScreenshots[missionScreenshotKey(slotId, cat)];
+        persistMissionScreenshots();
+        const card = getMissionCard(slotId);
+        if(card) renderMissionCatBody(card);
+        showToast('Screenshot cleared');
+      });
+    }
+  }
+
+  function buildInventoryCardHtml(slotId, name, num){
+    const img = inventoryState[slotId];
+    return '<div class="inventory-card" data-slot="' + slotId + '">' +
+      '<div class="mc-head">' +
+        '<span class="mc-slot-num">#' + num + '</span><span class="mc-name">' + escapeHtml(name) + '</span>' +
+        (img ? '<button type="button" class="mc-reset-missions-btn inv-clear-btn" title="Remove this screenshot">Clear</button>' : '') +
+      '</div>' +
+      '<div class="inv-slot" tabindex="0" title="Click here, then paste (Ctrl+V) a screenshot — or click to browse a file">' +
+        (img
+          ? '<img class="inv-img" src="' + img + '" alt="Inventory screenshot for ' + escapeHtml(name) + '">'
+          : '<div class="inv-placeholder"><span class="inv-placeholder-icon">🖼</span><span>Click here, then paste<br>a screenshot (Ctrl+V)<br><span class="inv-placeholder-sub">or click to browse a file</span></span></div>') +
+      '</div>' +
+      '<input type="file" class="inv-file-input" accept="image/*" style="display:none">' +
+    '</div>';
+  }
+
+  function bindInventoryCardEvents(card){
+    const slotId = card.dataset.slot;
+    const slot = card.querySelector('.inv-slot');
+    const fileInput = card.querySelector('.inv-file-input');
+    const clearBtn = card.querySelector('.inv-clear-btn');
+
+    slot.addEventListener('paste', function(e){
+      const items = (e.clipboardData && e.clipboardData.items) || [];
+      for(let i=0;i<items.length;i++){
+        if(items[i].type.indexOf('image') === 0){
+          const file = items[i].getAsFile();
+          if(file){ e.preventDefault(); processInventoryImage(slotId, file); }
+          break;
+        }
+      }
+    });
+
+    slot.addEventListener('click', function(){
+      if(!inventoryState[slotId]) fileInput.click();
+    });
+
+    slot.addEventListener('dragover', function(e){ e.preventDefault(); slot.classList.add('inv-drag-over'); });
+    slot.addEventListener('dragleave', function(){ slot.classList.remove('inv-drag-over'); });
+    slot.addEventListener('drop', function(e){
+      e.preventDefault();
+      slot.classList.remove('inv-drag-over');
+      const file = e.dataTransfer.files && e.dataTransfer.files[0];
+      if(file) processInventoryImage(slotId, file);
+    });
+
+    fileInput.addEventListener('change', function(){
+      const file = fileInput.files && fileInput.files[0];
+      if(file) processInventoryImage(slotId, file);
+      fileInput.value = '';
+    });
+
+    if(clearBtn){
+      clearBtn.addEventListener('click', function(e){
+        e.stopPropagation();
+        delete inventoryState[slotId];
+        persistInventoryState();
+        renderInventoryTrackers();
+        showToast('Inventory screenshot cleared');
+      });
+    }
+  }
+
+  function updateInventoryCardName(slotId, name){
+    const el = document.querySelector('.inventory-card[data-slot="' + slotId + '"] .mc-name');
+    if(el) el.textContent = name;
+  }
+
+  // Keeps every inventory slot the same size as its corresponding mission
+  // card (matched by position), so the two rows of cards line up visually.
+  function syncInventoryCardSizes(){
+    const missionCards = document.querySelectorAll('#mission-tracker-container .mission-card');
+    const invCards = document.querySelectorAll('#inventory-tracker-container .inventory-card');
+    missionCards.forEach(function(mc, i){
+      if(invCards[i]) invCards[i].style.minHeight = mc.offsetHeight + 'px';
+    });
+  }
+
+  function renderInventoryTrackers(){
+    const container = document.getElementById('inventory-tracker-container');
+    if(!container) return;
+    container.innerHTML = '';
+    document.querySelectorAll('#table-body tr').forEach(function(tr, i){
+      const nameInput = tr.querySelector('.f-name');
+      const name = (nameInput && nameInput.value.trim()) || ('Slot ' + (i+1));
+      container.insertAdjacentHTML('beforeend', buildInventoryCardHtml(tr.id, name, i+1));
+    });
+    document.querySelectorAll('#inventory-tracker-container .inventory-card').forEach(function(card){
+      bindInventoryCardEvents(card);
+    });
+    requestAnimationFrame(syncInventoryCardSizes);
+  }
+
+  /* ---------- Notepad (autosaving) ---------- */
+  let notepadSaveTimer = null;
+  let notepadStatusTimer = null;
+
+  function loadNotepad(){
+    const textarea = document.getElementById('notepad-textarea');
+    if(!textarea) return;
+    try{
+      const raw = localStorage.getItem(NOTEPAD_KEY);
+      if(raw !== null) textarea.value = raw;
+    }catch(e){ /* ignore */ }
+  }
+
+  function setNotepadStatus(text, cls){
+    const el = document.getElementById('notepad-status');
+    if(!el) return;
+    el.textContent = text;
+    el.classList.remove('saving', 'saved');
+    if(cls) el.classList.add(cls);
+    el.classList.add('show');
+    clearTimeout(notepadStatusTimer);
+    notepadStatusTimer = setTimeout(function(){ el.classList.remove('show'); }, 1400);
+  }
+
+  function bindNotepad(){
+    const textarea = document.getElementById('notepad-textarea');
+    if(!textarea) return;
+    textarea.addEventListener('input', function(){
+      setNotepadStatus('Saving…', 'saving');
+      clearTimeout(notepadSaveTimer);
+      notepadSaveTimer = setTimeout(function(){
+        try{
+          localStorage.setItem(NOTEPAD_KEY, textarea.value);
+          setNotepadStatus('Saved', 'saved');
+        }catch(e){
+          setNotepadStatus('Save failed', 'saving');
+        }
+      }, 400);
+    });
   }
 
   function getMissionData(slotId){
@@ -1998,7 +2459,7 @@
     return '<div class="mission-card" data-slot="' + slotId + '">' +
       '<div class="mc-head">' +
         '<span class="mc-slot-num">#' + num + '</span><span class="mc-name">' + escapeHtml(name) + '</span>' +
-        '<button type="button" class="mc-reset-missions-btn" title="Reset every mission in this slot (all categories) back to zero">Reset Missions</button>' +
+        (uiPrefs.missionScreenshotMode ? '' : '<button type="button" class="mc-reset-missions-btn" title="Reset every mission in this slot (all categories) back to zero">Reset Missions</button>') +
         '<div class="mc-stars">' +
           '<span class="mc-stars-label">Daily Stars</span>' +
           '<div class="mc-stars-row">' + starsHtml + '</div>' +
@@ -2034,6 +2495,14 @@
     // rebuilt from scratch — drop any reference to the old input first so
     // nothing is left pointing at a detached node.
     if(acInput && card.contains(acInput)) closeAutocomplete();
+
+    if(uiPrefs.missionScreenshotMode){
+      const wrap = card.querySelector('.mc-missions');
+      wrap.innerHTML = buildMissionScreenshotHtml(slotId, cat);
+      bindMissionScreenshotArea(wrap, slotId, cat);
+      requestAnimationFrame(syncInventoryCardSizes);
+      return;
+    }
 
     const missionsHtml = catData.missions.map(function(m, idx){
       const pct = missionPct(m);
@@ -2093,6 +2562,7 @@
         data.activeCat = this.dataset.cat;
         persistMissionState();
         renderMissionCatBody(card);
+        requestAnimationFrame(syncInventoryCardSizes);
       });
     });
 
@@ -3470,6 +3940,15 @@
     document.getElementById('import-export-menu').classList.remove('open');
   }
 
+  function toggleNotepad(e){
+    if(e) e.stopPropagation();
+    document.getElementById('notepad-panel').classList.toggle('open');
+  }
+
+  function closeNotepad(){
+    document.getElementById('notepad-panel').classList.remove('open');
+  }
+
   function bindGlobalHandlers(){
     document.getElementById('btn-add-slot').addEventListener('click', function(){ pushUndoSnapshot(); addSlot(); });
     document.getElementById('btn-save-all').addEventListener('click', saveAll);
@@ -3481,9 +3960,12 @@
     document.getElementById('btn-import-report').addEventListener('click', function(){ closeImportExportMenu(); triggerImportReport(); });
     document.getElementById('import-file-input').addEventListener('change', handleImportFile);
     document.getElementById('btn-import-export').addEventListener('click', toggleImportExportMenu);
+    document.getElementById('btn-notepad').addEventListener('click', toggleNotepad);
     document.addEventListener('click', function(e){
       const wrap = document.getElementById('btn-import-export').closest('.dropdown-wrap');
       if(wrap && !wrap.contains(e.target)) closeImportExportMenu();
+      const notepadWrap = document.getElementById('btn-notepad').closest('.dropdown-wrap');
+      if(notepadWrap && !notepadWrap.contains(e.target)) closeNotepad();
     });
     document.getElementById('import-report-overlay').addEventListener('click', closeImportReportModal);
     document.getElementById('btn-close-import-report').addEventListener('click', closeImportReportModal);
@@ -3520,6 +4002,11 @@
     loadStyle();
     loadAppState();
     loadMissionState();
+    loadInventoryState();
+    loadMissionScreenshots();
+    loadUiPrefs();
+    loadNotepad();
+    bindNotepad();
     if(appState.slots.length === 0){
       addSlot();
     } else {
@@ -3529,8 +4016,12 @@
     recalcGlobalFooter();
     renderSlotStyleSettings();
     bindGlobalHandlers();
+    bindUiPrefControls();
+    applyPanelVisibility();
     renderPlayTable();
     renderMissionTrackers();
+    renderInventoryTrackers();
+    window.addEventListener('resize', function(){ requestAnimationFrame(syncInventoryCardSizes); });
     setInterval(tickMissionTimers, 1000);
   }
 
